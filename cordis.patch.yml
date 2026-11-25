@@ -1,0 +1,10 @@
+# Bundle patch: one Host row for this package.
+#
+# The Host half owns the notebook: it reads and writes
+# `<DSH_HOME>/workspace-todos.json`, exposes it to the page on the exact Fetch
+# route `/api/workspace-todos`, and registers the `workspace_todos` tool for
+# the agent. The browser half keeps the sidebar entry, the centre page and the
+# right-Sidebar tab.
+- insert:
+    - id: dsh-workspace-todos:board
+      name: dsh-workspace-todos

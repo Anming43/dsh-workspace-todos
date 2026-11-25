@@ -1,0 +1,6 @@
+{
+  "meta": {
+    "title": "Workspace todos",
+    "description": "A todo notebook opened from the left sidebar and shared by every workspace. Each todo carries the workspace directory it belongs to and the page groups them by workspace; add, edit, tick off and delete items there, and \"Back to conversation\" returns to the chat. The notebook is one JSON file at a fixed path under the Harness home (workspace-todos.json), read and written by this bundle's Host half, so sessions in any workspace share it and the agent can change it with the workspace_todos tool. The page re-reads the file every few seconds, so an agent's change appears without a reload. Turning the plugin off removes the sidebar entry, its page and the tool; the file stays on disk."
+  }
+}

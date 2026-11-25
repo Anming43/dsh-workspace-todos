@@ -1,0 +1,13 @@
+# Dependencies, if anyone ever adds them
+node_modules/
+
+# Local scratch space
+/.tmp/
+.tmp/
+*.log
+
+# Editor and OS noise
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
