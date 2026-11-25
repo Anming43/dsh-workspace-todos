@@ -19,6 +19,16 @@ the human edits and a tool the agent edits — both on the same JSON file.
 - **Newest edit first.** Every card stores when it was last modified
   (`updatedAt`, shown on the card as `2026-11-25 17:40`), and both surfaces list
   cards newest-modified first, so whatever was just touched rises to the top.
+- **A short id on every card.** Each card carries a generated id — the badge is
+  the first eight hex digits of the stored UUID, stable for the card's lifetime
+  and unique without a counter. The badge is what you quote; the agent sees the
+  full id in tool results.
+- **Two controls per card.** *Execute todo* sends the card into a Session as an
+  ordinary user message asking the agent to do the work; *Explain todo* sends
+  the same card asking the agent to explain it first — what it asks for, why,
+  which files or steps it touches, what is unclear — and to change nothing. Both
+  carry the id, workspace, status and modification time, so the agent can find
+  the card again and close it with the `workspace_todos` tool.
 - **Cards with Markdown bodies.** Paragraphs, headings, bullet and numbered
   lists, quotes, fenced code, `inline code`, **bold**, *italic*,
   ~~strikethrough~~ and http(s)/mailto links. Parsed into React elements — no
@@ -65,7 +75,12 @@ workspace, Ctrl/Cmd+Enter adds), a checkbox for done, a pencil to edit the
 Markdown source, a bin to delete. **Back to conversation** returns to the chat.
 Ticking a card moves it into the *Completed* area at the bottom, which starts
 folded; its header reopens the card, and unticking it there puts the card back
-among the open ones.
+among the open ones. Two card controls send it into the last conversation that
+was on screen (the page itself has no Session of its own): the play control
+(*Execute todo*) asks the agent to do the work, the question control (*Explain
+todo*) asks what it means first. The right-Sidebar panel sends into the Session
+that panel belongs to. After a send the control turns into a checkmark for a few
+seconds; a failure shows in the page's error line.
 
 **Right Sidebar → + → Workspace todos** opens a panel scoped to the shown
 Session's workspace: it lists only that workspace's cards and adds new ones
@@ -121,6 +136,8 @@ The notebook is one file:
   `createdAt`, which stands in for it until the next write stores both.
 - The file keeps records in the order they were added; `list` and both surfaces
   sort by `updatedAt` instead of trusting that order.
+- The `#` badge is derived from `id`, not stored: no extra field, and a record
+  written before the badge existed still shows one.
 - The page talks to the Host through the exact Fetch route
   `/api/workspace-todos` on Connection's shared channel, behind the browser's
   authentication fence.
@@ -142,6 +159,12 @@ rendered as plain text.
   modification time.
 - The *Completed* area starts folded every time a surface mounts; its open state
   is not remembered between visits.
+- The centre page sends into the last conversation it saw on screen. With no
+  conversation opened since startup, both controls stay disabled; the
+  right-Sidebar panel always has its own Session.
+- A sent card becomes a normal user message in that Session: *Execute* starts a
+  turn if the Session is idle, and there is no undo beyond deleting the message.
+  *Explain* asks the agent to leave the card open.
 - Surfaces poll every 3 seconds rather than receiving a push, so a change the
   agent makes can lag by up to that interval.
 - A workspace that was deleted keeps the label captured when its first card was
@@ -164,6 +187,12 @@ rendered as plain text.
 
 ## Verification
 
+Checked for 1.2.0: `node --check` on both entry points; the Host harness against
+a throwaway `DSH_HOME` (unchanged by this release, still covering the store,
+timestamps, ordering and the Fetch envelope); and the load-and-apply pass over
+the browser half, which now also supplies `sessions` and `uiSession` and proves
+the three slot registrations.
+
 Checked for 1.1.0: `node --check` on both entry points; the Host harness run
 against a throwaway `DSH_HOME` — add/update/remove, workspace filters, refusals,
 foreign-version and malformed files, `updatedAt` written on add and on every
@@ -177,9 +206,11 @@ The 1.0.0 release was additionally checked with the installed
 with a minimal React stand-in, and live use in the Desktop app (activation, tool
 round trip, authenticated route, centre page).
 
-**Not verified:** the folded *Completed* area and the timestamp line have not
-been looked at in a running app — no browser control was available here, so
-their spacing, the chevron and light/dark contrast remain unreviewed.
+**Not verified:** the folded *Completed* area, the timestamp line, the id badge
+and the two card controls have not been looked at in a running app — no browser
+control was available here. Both send paths follow the composer's own
+`Session.prompt` call and the last-on-screen Session source, but a live send has
+not been exercised.
 
 ## License
 

@@ -82,6 +82,29 @@ window.__ModuleLoader__.load({
       'section.done': 'Completed · {count}',
       'section.toggle': 'Show or hide completed todos',
       'card.updated': 'Updated {time}',
+      'card.id': 'Todo id {id}',
+      'execute.label': 'Execute todo',
+      'explain.label': 'Explain todo',
+      'execute.aria': 'Execute “{text}”',
+      'explain.aria': 'Explain “{text}”',
+      'execute.sent': 'Execution requested',
+      'explain.sent': 'Explanation requested',
+      'send.disabled': 'Open a conversation first',
+      'execute.prompt': 'Execute this todo from the shared workspace todo notebook.\n\n'
+        + '- Todo: {short} (`{id}`)\n'
+        + '- Workspace: {workspace}\n'
+        + '- Status: {status}\n'
+        + '- Last modified: {time}\n\n'
+        + '---\n\n{text}\n\n'
+        + 'When it is finished, close it with the workspace_todos tool: update with this id and done=true.',
+      'explain.prompt': 'Explain this todo from the shared workspace todo notebook; do not change anything yet.\n\n'
+        + '- Todo: {short} (`{id}`)\n'
+        + '- Workspace: {workspace}\n'
+        + '- Status: {status}\n'
+        + '- Last modified: {time}\n\n'
+        + '---\n\n{text}\n\n'
+        + 'Say what it asks for, why it matters, which files or steps it touches, and what is unclear. '
+        + 'Leave the todo open unless I ask you to do it.',
       'card.done': 'Done',
       'card.open': 'Open',
       'row.toggle': 'Toggle “{text}”',
@@ -115,6 +138,28 @@ window.__ModuleLoader__.load({
       'section.done': '已完成 · {count}',
       'section.toggle': '展开或收起已完成待办',
       'card.updated': '修改于 {time}',
+      'card.id': '待办 ID {id}',
+      'execute.label': '执行待办',
+      'explain.label': '解释待办',
+      'execute.aria': '执行待办「{text}」',
+      'explain.aria': '解释待办「{text}」',
+      'execute.sent': '已发送执行请求',
+      'explain.sent': '已发送解释请求',
+      'send.disabled': '先打开一个会话',
+      'execute.prompt': '执行这条待办（来自跨工作区待办本）：\n\n'
+        + '- 待办：{short}（`{id}`）\n'
+        + '- 工作区：{workspace}\n'
+        + '- 状态：{status}\n'
+        + '- 最后修改：{time}\n\n'
+        + '---\n\n{text}\n\n'
+        + '完成后用 workspace_todos 工具标记完成：update，带上这条 id 和 done=true。',
+      'explain.prompt': '解释这条待办（来自跨工作区待办本），先不要动手改动：\n\n'
+        + '- 待办：{short}（`{id}`）\n'
+        + '- 工作区：{workspace}\n'
+        + '- 状态：{status}\n'
+        + '- 最后修改：{time}\n\n'
+        + '---\n\n{text}\n\n'
+        + '说明它要做什么、为什么、涉及哪些文件或步骤、有哪些不确定点；除非我明确要求，否则保持未完成。',
       'card.done': '已完成',
       'card.open': '未完成',
       'row.toggle': '切换「{text}」的完成状态',
@@ -148,6 +193,29 @@ window.__ModuleLoader__.load({
      */
     function describeError(cause) {
       return cause instanceof Error ? cause.message : String(cause)
+    }
+
+    /** Local reference source this page counts under while it sends a prompt. */
+    const SESSION_SOURCE = 'workspace-todos'
+
+    /**
+     * Send one todo into a Session as the user's own prompt.
+     *
+     * The message goes through the same `Session.prompt` call the composer
+     * uses, so it is an ordinary durable user message: the conversation shows
+     * it, the agent runs it, and a cold Session is resumed by the Host.
+     *
+     * @param ctx - the browser plugin context, providing `sessions`.
+     * @param sessionId - the Session to send into.
+     * @param text - the prompt text.
+     * @returns completion once the Host accepted the prompt.
+     * @throws {Error} when the Session cannot be opened or the prompt is refused.
+     */
+    async function sendToSession(ctx, sessionId, text) {
+      await ctx.sessions.using(sessionId, { source: SESSION_SOURCE }, async (reference) => {
+        const result = await reference.binding.session.prompt([{ type: 'text', text }], 'queue')
+        if (!result.ok) throw new Error(`todo board: ${result.error.message}`)
+      })
     }
 
     // -------------------------------------------------------------- migration
@@ -443,6 +511,36 @@ window.__ModuleLoader__.load({
     }
 
     /**
+     * The short form of a todo id shown on the card: its first eight hex
+     * digits. It is derived, not stored, so every record has one — including
+     * the ones written before the badge existed — and it never changes.
+     *
+     * @param item - a stored record.
+     * @returns the badge text, without the leading `#`.
+     */
+    function shortId(item) {
+      return item.id.replace(/-/g, '').slice(0, 8)
+    }
+
+    /**
+     * Compose the message a card sends into a conversation.
+     * @param t - the bound translator.
+     * @param item - the card being sent.
+     * @param kind - `execute` asks for the work, `explain` asks what it means.
+     * @returns Markdown naming the todo, its id, and what the agent should do.
+     */
+    function sendPrompt(t, item, kind) {
+      return t(kind === 'explain' ? 'explain.prompt' : 'execute.prompt', {
+        short: shortId(item),
+        id: item.id,
+        workspace: item.workspacePath,
+        status: item.done ? t('card.done') : t('card.open'),
+        time: formatStamp(item.updatedAt),
+        text: item.text,
+      })
+    }
+
+    /**
      * Group notebook records by the workspace path they carry.
      *
      * Groups follow the workspace service's own order, so the page reads in the
@@ -601,7 +699,7 @@ window.__ModuleLoader__.load({
      * @returns the list element.
      */
     function TodoCardList(props) {
-      const { t, items, editor, className, showWorkspace } = props
+      const { t, items, editor, className, showWorkspace, onSend, canSend, onSendError } = props
       return h('ul', { className },
         items.map(item => h(TodoCard, {
           key: item.id,
@@ -616,6 +714,9 @@ window.__ModuleLoader__.load({
           onToggle: editor.toggle,
           onDelete: editor.remove,
           showWorkspace,
+          onSend,
+          canSend,
+          onSendError,
         })))
     }
 
@@ -631,7 +732,7 @@ window.__ModuleLoader__.load({
      * @returns the section element, or null when no record is completed.
      */
     function CompletedSection(props) {
-      const { t, items, editor, className, showWorkspace } = props
+      const { t, items, editor, className, showWorkspace, onSend, canSend, onSendError } = props
       const [open, setOpen] = React.useState(false)
       if (items.length === 0) return null
       return h('section', { className: 'dsh-todo-done' },
@@ -645,7 +746,7 @@ window.__ModuleLoader__.load({
         h(ChevronGlyph, { open }),
         h('span', { className: 'dsh-todo-doneTitle' }, t('section.done', { count: items.length }))),
         open
-          ? h(TodoCardList, { t, items, editor, className, showWorkspace })
+          ? h(TodoCardList, { t, items, editor, className, showWorkspace, onSend, canSend, onSendError })
           : null)
     }
 
@@ -717,6 +818,83 @@ window.__ModuleLoader__.load({
     }
 
     /**
+     * Inline play glyph for a card's execute control.
+     * @returns the icon element, in the current text colour.
+     */
+    function ExecuteGlyph() {
+      return h('svg', {
+        viewBox: '0 0 16 16',
+        width: 14,
+        height: 14,
+        'aria-hidden': true,
+        focusable: 'false',
+      }, h('path', {
+        d: 'M5.6 3.5v9l6.9-4.5-6.9-4.5Z',
+        fill: 'none',
+        stroke: 'currentColor',
+        strokeWidth: 1.3,
+        strokeLinejoin: 'round',
+      }))
+    }
+
+    /**
+     * Inline question glyph for a card's explain control.
+     * @returns the icon element, in the current text colour.
+     */
+    function ExplainGlyph() {
+      return h('svg', {
+        viewBox: '0 0 16 16',
+        width: 14,
+        height: 14,
+        'aria-hidden': true,
+        focusable: 'false',
+      },
+      h('circle', {
+        cx: 8,
+        cy: 8,
+        r: 6.2,
+        fill: 'none',
+        stroke: 'currentColor',
+        strokeWidth: 1.2,
+      }),
+      h('path', {
+        d: 'M6.2 6.2a1.85 1.85 0 1 1 2.7 1.65c-.55.35-.85.8-.85 1.4v.2',
+        fill: 'none',
+        stroke: 'currentColor',
+        strokeWidth: 1.2,
+        strokeLinecap: 'round',
+      }),
+      h('path', {
+        d: 'M8.05 11.5v.2',
+        fill: 'none',
+        stroke: 'currentColor',
+        strokeWidth: 1.5,
+        strokeLinecap: 'round',
+      }))
+    }
+
+    /**
+     * Inline check glyph shown once a card was sent.
+     * @returns the icon element, in the current text colour.
+     */
+    function CheckGlyph() {
+      return h('svg', {
+        viewBox: '0 0 16 16',
+        width: 14,
+        height: 14,
+        'aria-hidden': true,
+        focusable: 'false',
+      }, h('path', {
+        d: 'M3.2 8.6 6.4 11.7 12.8 4.6',
+        fill: 'none',
+        stroke: 'currentColor',
+        strokeWidth: 1.5,
+        strokeLinecap: 'round',
+        strokeLinejoin: 'round',
+      }))
+    }
+
+    /**
      * The left sidebar's launcher glyph.
      *
      * The sidebar owns the row, its label and its active colour, so the glyph is
@@ -769,20 +947,55 @@ window.__ModuleLoader__.load({
     }
 
     /**
-     * One todo card: a head with the completion control and actions, the
-     * Markdown body, then a meta line with the modification time. While
-     * editing, the body becomes a textarea and two buttons.
+     * One todo card: a head with the completion control, the execute and
+     * explain controls and the other actions, the Markdown body, then a meta
+     * line with the short id and the modification time. While editing, the body
+     * becomes a textarea and two buttons.
      *
      * @param props - the translated strings, the item, its editing state, the
-     *   card's callbacks, and whether the card names its workspace.
+     *   card's callbacks, whether the card names its workspace, and whether it
+     *   can send itself into a conversation.
      * @returns the list item element.
      */
     function TodoCard(props) {
       const {
         t, item, editing, draft, onDraftChange, onStartEdit, onCancelEdit, onSaveEdit, onToggle, onDelete,
-        showWorkspace,
+        showWorkspace, onSend, canSend, onSendError,
       } = props
+      const [sendStates, setSendStates] = React.useState({ execute: 'idle', explain: 'idle' })
+      const sendTimers = React.useRef({ execute: 0, explain: 0 })
+      React.useEffect(() => () => {
+        window.clearTimeout(sendTimers.current.execute)
+        window.clearTimeout(sendTimers.current.explain)
+      }, [])
       const blocks = React.useMemo(() => (editing ? [] : parseBlocks(item.text)), [editing, item.text])
+
+      const triggerSend = async (kind) => {
+        if (canSend !== true || sendStates[kind] === 'sending') return
+        setSendStates(value => ({ ...value, [kind]: 'sending' }))
+        try {
+          await onSend(item, kind)
+          setSendStates(value => ({ ...value, [kind]: 'sent' }))
+          window.clearTimeout(sendTimers.current[kind])
+          sendTimers.current[kind] = window.setTimeout(() => {
+            setSendStates(value => ({ ...value, [kind]: 'idle' }))
+          }, 4000)
+        } catch (cause) {
+          setSendStates(value => ({ ...value, [kind]: 'idle' }))
+          onSendError(cause)
+        }
+      }
+
+      const sendControl = (kind, Glyph, label) => h('button', {
+        type: 'button',
+        className: 'dsh-todo-iconButton',
+        disabled: canSend !== true || sendStates[kind] === 'sending',
+        'aria-label': canSend === true ? t(`${kind}.aria`, { text: item.text }) : t('send.disabled'),
+        title: canSend === true
+          ? (sendStates[kind] === 'sent' ? t(`${kind}.sent`) : label)
+          : t('send.disabled'),
+        onClick: () => { void triggerSend(kind) },
+      }, sendStates[kind] === 'sent' ? h(CheckGlyph) : h(Glyph))
 
       return h('li', { className: 'dsh-todo-card', 'data-done': item.done ? 'true' : 'false' },
         h('div', { className: 'dsh-todo-cardHead' },
@@ -796,6 +1009,8 @@ window.__ModuleLoader__.load({
             }),
             h('span', { className: 'dsh-todo-status' }, item.done ? t('card.done') : t('card.open'))),
           h('div', { className: 'dsh-todo-cardActions' },
+            sendControl('execute', ExecuteGlyph, t('execute.label')),
+            sendControl('explain', ExplainGlyph, t('explain.label')),
             h('button', {
               type: 'button',
               className: 'dsh-todo-iconButton',
@@ -846,6 +1061,10 @@ window.__ModuleLoader__.load({
           : h('div', { className: 'dsh-todo-md' }, renderMarkdown(blocks)),
         h('div', { className: 'dsh-todo-meta' },
           h('span', {
+            className: 'dsh-todo-metaId',
+            title: t('card.id', { id: item.id }),
+          }, `#${shortId(item)}`),
+          h('span', {
             className: 'dsh-todo-metaTime',
             title: item.updatedAt,
           }, t('card.updated', { time: formatStamp(item.updatedAt) })),
@@ -860,17 +1079,23 @@ window.__ModuleLoader__.load({
     /**
      * The page the sidebar launcher selects.
      *
-     * It reads workspaces through the injected `useTodoWorkspaces` hook and the
-     * notebook through the Host, and re-reads the Host on a short interval so a
-     * card the agent wrote appears while the page is open.
+     * It reads workspaces through the injected `useTodoWorkspaces` hook, the
+     * Session cards send into through `currentSessionSource`, and the notebook
+     * through the Host, and re-reads the Host on a short interval so a card the
+     * agent wrote appears while the page is open.
      *
-     * @param props - `t`, `useTodoWorkspaces`, `closeBoard` and `board`.
+     * @param props - `t`, the workspace hook, `currentSessionSource`,
+     *   `closeBoard` and `board`.
      * @returns the page element.
      */
     function TodoBoardPage(props) {
-      const { t, useTodoWorkspaces, closeBoard, board } = props
+      const { t, useTodoWorkspaces, currentSessionSource, closeBoard, board } = props
 
       const workspaces = useTodoWorkspaces(snapshot => snapshot.items)
+      const sessionId = React.useSyncExternalStore(
+        currentSessionSource.subscribe,
+        currentSessionSource.getSnapshot,
+      )
       const workspacesPending = useTodoWorkspaces(snapshot => snapshot.phase !== 'ready')
       const workspacesRef = React.useRef(workspaces)
       workspacesRef.current = workspaces
@@ -941,6 +1166,11 @@ window.__ModuleLoader__.load({
 
       const addDisabled = draftText.trim() === '' || selectedWorkspacePath === ''
 
+      const send = (item, kind) => {
+        if (sessionId === undefined) return Promise.reject(new Error(t('send.disabled')))
+        return board.send(sessionId, sendPrompt(t, item, kind))
+      }
+
       return h('div', { className: 'dsh-todo-page' },
         h('header', { className: 'dsh-todo-head' },
           h('div', { className: 'dsh-todo-headMain' },
@@ -1007,6 +1237,9 @@ window.__ModuleLoader__.load({
                           items: group.items,
                           editor,
                           className: 'dsh-todo-cards',
+                          onSend: send,
+                          canSend: sessionId !== undefined,
+                          onSendError: report,
                         })))),
                   h(CompletedSection, {
                     key: 'done',
@@ -1015,6 +1248,9 @@ window.__ModuleLoader__.load({
                     editor,
                     className: 'dsh-todo-cards',
                     showWorkspace: true,
+                    onSend: send,
+                    canSend: sessionId !== undefined,
+                    onSendError: report,
                   }),
                 ])))
     }
@@ -1074,6 +1310,11 @@ window.__ModuleLoader__.load({
         }
       }
 
+      const send = (item, kind) => {
+        if (sessionId === undefined) return Promise.reject(new Error(t('send.disabled')))
+        return board.send(sessionId, sendPrompt(t, item, kind))
+      }
+
       return h('div', { className: 'dsh-todo-panel' },
         workspace === undefined
           ? null
@@ -1127,6 +1368,9 @@ window.__ModuleLoader__.load({
                       items: openItems,
                       editor,
                       className: 'dsh-todo-panelCards',
+                      onSend: send,
+                      canSend: sessionId !== undefined,
+                      onSendError: report,
                     }),
                   h(CompletedSection, {
                     key: 'done',
@@ -1134,6 +1378,9 @@ window.__ModuleLoader__.load({
                     items: doneItems,
                     editor,
                     className: 'dsh-todo-panelCards',
+                    onSend: send,
+                    canSend: sessionId !== undefined,
+                    onSendError: report,
                   }),
                 ],
           ])
@@ -1479,6 +1726,10 @@ html[data-platform='darwin'] .dsh-todo-head {
 .dsh-todo-iconButton[data-variant='danger'] {
   color: var(--dsw-alias-state-error-primary);
 }
+.dsh-todo-iconButton:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
 @media (hover: hover) {
   .dsh-todo-iconButton:hover {
     background: var(--dsw-alias-interactive-bg-hover);
@@ -1567,11 +1818,23 @@ h6.dsh-todo-mdH { font-size: 13px; }
 .dsh-todo-meta {
   display: flex;
   flex-wrap: wrap;
+  align-items: center;
   gap: 2px 10px;
   min-width: 0;
   font-size: 12px;
   line-height: 18px;
   color: var(--dsw-alias-label-tertiary);
+}
+.dsh-todo-metaId {
+  flex: none;
+  padding: 0 5px;
+  font-family: var(--dsw-font-family-mono, ui-monospace, SFMono-Regular, Menlo, monospace);
+  font-size: 11px;
+  line-height: 17px;
+  color: var(--dsw-alias-label-secondary);
+  background: var(--dsw-alias-bg-base);
+  border: 0.5px solid var(--dsw-alias-border-l3);
+  border-radius: var(--dsw-radius-sm);
 }
 .dsh-todo-metaTime {
   flex: none;
@@ -1678,7 +1941,9 @@ h6.dsh-todo-mdH { font-size: 13px; }
 
     return {
       /** Services this browser half needs; it stays inactive without them. */
-      inject: ['slots', 'locale', 'layout', 'workspaces', 'connection', 'sidebarRightTabs'],
+      inject: [
+        'slots', 'locale', 'layout', 'workspaces', 'connection', 'sessions', 'uiSession', 'sidebarRightTabs',
+      ],
 
       /**
        * Contribute the launcher and the page it opens.
@@ -1691,6 +1956,36 @@ h6.dsh-todo-mdH { font-size: 13px; }
 
         ctx.effect(installStyles, 'todo-board: stylesheet')
 
+        // The Session a card sends into from the centre page: the last
+        // conversation that was on screen. A global main panel has no Session
+        // binding of its own, and the Conversation unmounts while a panel is
+        // shown, so this keeps the last identity the shell reported instead of
+        // reading an empty binding at click time.
+        let lastSessionId
+        const sessionListeners = new Set()
+        const sessionSource = {
+          getSnapshot: () => lastSessionId,
+          subscribe: (listener) => {
+            sessionListeners.add(listener)
+            return () => { sessionListeners.delete(listener) }
+          },
+        }
+        ctx.effect(() => {
+          const current = ctx.uiSession.adapter.current
+          const note = () => {
+            const key = current.getSnapshot()?.key
+            if (typeof key !== 'string' || key === '' || key === lastSessionId) return
+            lastSessionId = key
+            for (const listener of sessionListeners) listener()
+          }
+          const unsubscribe = current.subscribe(note)
+          note()
+          return () => {
+            unsubscribe()
+            sessionListeners.clear()
+          }
+        }, 'todo-board: last on-screen session')
+
         // One stable API object: the page's effects key on it, so it must not be
         // rebuilt on every render.
         const board = {
@@ -1698,6 +1993,7 @@ h6.dsh-todo-mdH { font-size: 13px; }
           add: input => callBoard(ctx, { action: 'add', ...input }),
           update: input => callBoard(ctx, { action: 'update', ...input }),
           remove: id => callBoard(ctx, { action: 'remove', id }),
+          send: (sessionId, text) => sendToSession(ctx, sessionId, text),
         }
 
         ctx.slots.inject('main', () => ctx.slots.register({
@@ -1706,6 +2002,7 @@ h6.dsh-todo-mdH { font-size: 13px; }
           locale: NS,
           inject: () => ({
             hooks: { todoWorkspaces: ctx.workspaces.list },
+            currentSessionSource: sessionSource,
             closeBoard: () => { ctx.layout.selectPanel(null) },
             board,
           }),
