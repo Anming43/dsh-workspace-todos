@@ -64,6 +64,11 @@ function pathKey(value) {
 
 /**
  * Read and validate one stored record.
+ *
+ * `updatedAt` was added after the first release, so a record written by 1.0.0
+ * has only `createdAt`: that value stands in for the modification time until
+ * the record is written again, and every write from then on stores both.
+ *
  * @param value - one raw element of the stored `items` array.
  * @param index - its position, used in failure messages.
  * @returns the record with exactly the fields this build reads.
@@ -73,7 +78,7 @@ function normalizeItem(value, index) {
   if (typeof value !== 'object' || value === null || Array.isArray(value)) {
     throw new Error(`todo board: ${DATA_FILE} item #${index} is not an object`)
   }
-  const { id, workspacePath, workspaceLabel, text, done, createdAt } = value
+  const { id, workspacePath, workspaceLabel, text, done, createdAt, updatedAt } = value
   if (typeof id !== 'string' || id === '') {
     throw new Error(`todo board: ${DATA_FILE} item #${index} has no id`)
   }
@@ -92,6 +97,10 @@ function normalizeItem(value, index) {
   if (typeof createdAt !== 'string' || createdAt === '') {
     throw new Error(`todo board: item "${id}" has no creation time`)
   }
+  if (updatedAt !== undefined && updatedAt !== null
+    && (typeof updatedAt !== 'string' || updatedAt === '')) {
+    throw new Error(`todo board: item "${id}" has an invalid modification time`)
+  }
   return {
     id,
     workspacePath: workspacePath.trim(),
@@ -99,6 +108,7 @@ function normalizeItem(value, index) {
     text: text.trim(),
     done,
     createdAt,
+    updatedAt: typeof updatedAt === 'string' && updatedAt !== '' ? updatedAt : createdAt,
   }
 }
 
@@ -161,16 +171,31 @@ async function persist(records) {
 }
 
 /**
+ * Order records the way both surfaces read them: the most recently modified
+ * first, so a card rises to the top of its section whenever it is touched.
+ * ISO 8601 strings from `toISOString` sort chronologically; the id breaks ties
+ * (two writes inside one millisecond) so the order is total and stable.
+ * @param records - the records in stored order.
+ * @returns a new array, sorted newest-modified first.
+ */
+function newestFirst(records) {
+  return [...records].sort((left, right) => {
+    if (left.updatedAt !== right.updatedAt) return left.updatedAt < right.updatedAt ? 1 : -1
+    return left.id < right.id ? -1 : 1
+  })
+}
+
+/**
  * The value every operation returns and the tool's canonical output.
  * @param records - the complete stored list.
  * @param query - optional workspace filter, matched against path or label.
- * @returns the file path and the matching records.
+ * @returns the file path and the matching records, newest-modified first.
  */
 function snapshot(records, query) {
   const selected = query === undefined
     ? records
     : records.filter(item => matchesWorkspace(item, query))
-  return { file: DATA_FILE, items: selected.map(item => ({ ...item })) }
+  return { file: DATA_FILE, items: newestFirst(selected).map(item => ({ ...item })) }
 }
 
 /**
@@ -250,13 +275,15 @@ async function dispatch(payload) {
     const label = optionalText(input.label, 'label') ?? basename(workspacePath)
     return serialized(async () => {
       const records = await readStore()
+      const now = new Date().toISOString()
       records.push({
         id: randomUUID(),
         workspacePath,
         workspaceLabel: label,
         text,
         done: false,
-        createdAt: new Date().toISOString(),
+        createdAt: now,
+        updatedAt: now,
       })
       await persist(records)
       return snapshot(records)
@@ -286,6 +313,7 @@ async function dispatch(payload) {
       } else if (label !== undefined) {
         item.workspaceLabel = label
       }
+      item.updatedAt = new Date().toISOString()
       await persist(records)
       return snapshot(records)
     })
@@ -358,8 +386,9 @@ const TOOL_OUTPUT_SCHEMA = {
           text: { type: 'string' },
           done: { type: 'boolean' },
           createdAt: { type: 'string' },
+          updatedAt: { type: 'string' },
         },
-        required: ['id', 'workspacePath', 'workspaceLabel', 'text', 'done', 'createdAt'],
+        required: ['id', 'workspacePath', 'workspaceLabel', 'text', 'done', 'createdAt', 'updatedAt'],
       },
     },
   },
@@ -369,14 +398,15 @@ const TOOL_OUTPUT_SCHEMA = {
 /**
  * Render one snapshot for the model.
  * @param value - the validated canonical output.
- * @returns one text block listing every todo, including its id.
+ * @returns one text block listing every todo, newest-modified first, with its
+ *   id and modification time.
  */
 function renderSnapshot(value) {
   const open = value.items.filter(item => !item.done).length
   const head = `${value.items.length} todo(s), ${open} open — ${value.file}`
   if (value.items.length === 0) return [{ type: 'text', text: head }]
   const lines = value.items.map(item => (
-    `- [${item.done ? 'x' : ' '}] ${item.text} — ${item.workspaceLabel} (${item.workspacePath}) id=${item.id}`
+    `- [${item.done ? 'x' : ' '}] ${item.text} — ${item.workspaceLabel} (${item.workspacePath}) id=${item.id} updated=${item.updatedAt}`
   ))
   return [{ type: 'text', text: `${head}\n${lines.join('\n')}` }]
 }
@@ -440,6 +470,7 @@ export function apply(ctx) {
     description: 'Read or change the shared workspace todo notebook that the user sees in the "跨工作区待办本" page. '
       + 'One notebook is shared by every workspace; each todo carries the workspace directory it belongs to. '
       + 'Call list first to get ids, then add, update (text or done), or remove. '
+      + 'Every result lists todos newest-modified first and carries each todo\'s updatedAt. '
       + 'Changes appear in the page within a few seconds and need no reload.',
     parameters: TOOL_PARAMETERS,
     output: {

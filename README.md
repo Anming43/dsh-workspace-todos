@@ -9,9 +9,16 @@ the human edits and a tool the agent edits — both on the same JSON file.
 ## What it gives you
 
 - **One notebook, every workspace.** A todo carries the workspace directory it
-  belongs to; the page groups cards by workspace in the same order the sidebar
-  lists workspaces. Nothing is per-session, so a todo added in one conversation
-  is visible from every other one.
+  belongs to; the page groups open cards by workspace in the same order the
+  sidebar lists workspaces. Nothing is per-session, so a todo added in one
+  conversation is visible from every other one.
+- **Completed work folds away.** Ticking a card moves it out of its workspace
+  group into one *Completed* area at the bottom of the page, collapsed by
+  default; the right-Sidebar panel keeps the same area for its workspace only.
+  Its header shows the count and opens or closes the cards.
+- **Newest edit first.** Every card stores when it was last modified
+  (`updatedAt`, shown on the card as `2026-11-25 17:40`), and both surfaces list
+  cards newest-modified first, so whatever was just touched rises to the top.
 - **Cards with Markdown bodies.** Paragraphs, headings, bullet and numbered
   lists, quotes, fenced code, `inline code`, **bold**, *italic*,
   ~~strikethrough~~ and http(s)/mailto links. Parsed into React elements — no
@@ -56,6 +63,9 @@ builtins.
 one group per workspace, a card per todo, an add card at the top (pick the
 workspace, Ctrl/Cmd+Enter adds), a checkbox for done, a pencil to edit the
 Markdown source, a bin to delete. **Back to conversation** returns to the chat.
+Ticking a card moves it into the *Completed* area at the bottom, which starts
+folded; its header reopens the card, and unticking it there puts the card back
+among the open ones.
 
 **Right Sidebar → + → Workspace todos** opens a panel scoped to the shown
 Session's workspace: it lists only that workspace's cards and adds new ones
@@ -72,7 +82,8 @@ Session's workspace.
 | `remove` | `id` | deletes that card |
 
 Every action returns the complete notebook, so the model always sees the current
-state. Ids come from a previous result.
+state, ordered newest-modified first and carrying each card's `updatedAt`. Ids
+come from a previous result.
 
 ## Storage
 
@@ -92,7 +103,8 @@ The notebook is one file:
       "workspaceLabel": "alpha",
       "text": "写接口文档",
       "done": false,
-      "createdAt": "2026-11-25T08:00:00.000Z"
+      "createdAt": "2026-11-25T08:00:00.000Z",
+      "updatedAt": "2026-11-25T09:40:00.000Z"
     }
   ]
 }
@@ -105,6 +117,10 @@ The notebook is one file:
   are serialized, so concurrent writers cannot interleave a read and a write.
 - Every operation re-reads the file before changing it, so a hand edit is picked
   up by the next page poll and the next tool call.
+- `updatedAt` is rewritten on every change. A record written by 1.0.0 has only
+  `createdAt`, which stands in for it until the next write stores both.
+- The file keeps records in the order they were added; `list` and both surfaces
+  sort by `updatedAt` instead of trusting that order.
 - The page talks to the Host through the exact Fetch route
   `/api/workspace-todos` on Connection's shared channel, behind the browser's
   authentication fence.
@@ -122,7 +138,10 @@ rendered as plain text.
 - One file, one notebook: two DSH processes sharing one `DSH_HOME` write the
   same file, with no cross-process lock (last writer wins per operation).
 - A card is Markdown text plus completion and workspace: no due date, priority,
-  tags, attachments or reordering.
+  tags, attachments or manual ordering — the order is always the last
+  modification time.
+- The *Completed* area starts folded every time a surface mounts; its open state
+  is not remembered between visits.
 - Surfaces poll every 3 seconds rather than receiving a push, so a change the
   agent makes can lag by up to that interval.
 - A workspace that was deleted keeps the label captured when its first card was
@@ -145,14 +164,22 @@ rendered as plain text.
 
 ## Verification
 
-Checked while building this: `node --check` on both entry points; a stub-Cordis
-harness over the Host half (registration, add/update/remove, filters, refusals,
-corrupt and foreign-version files); the installed `@deepseek-ai/dsh-tools`
-schema checks; a Markdown parser suite; and a render pass over both surfaces
-with a minimal React stand-in. Live behaviour — activation, the tool round trip,
-the authenticated route, and the centre page — was exercised in the Desktop app.
-The right-Sidebar tab is covered by the render pass and by activation, but its
-visual result has not been reviewed yet.
+Checked for 1.1.0: `node --check` on both entry points; the Host harness run
+against a throwaway `DSH_HOME` — add/update/remove, workspace filters, refusals,
+foreign-version and malformed files, `updatedAt` written on add and on every
+update, newest-modified-first ordering, a 1.0.0 record upgraded on the next
+write, and the client-request envelope on the Fetch route; and a load-and-apply
+pass over the browser half that proves the factory id, the injected services and
+the three slot registrations without rendering anything.
+
+The 1.0.0 release was additionally checked with the installed
+`@deepseek-ai/dsh-tools` schema checks, a Markdown parser suite, a render pass
+with a minimal React stand-in, and live use in the Desktop app (activation, tool
+round trip, authenticated route, centre page).
+
+**Not verified:** the folded *Completed* area and the timestamp line have not
+been looked at in a running app — no browser control was available here, so
+their spacing, the chevron and light/dark contrast remain unreviewed.
 
 ## License
 

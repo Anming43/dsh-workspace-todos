@@ -78,6 +78,10 @@ window.__ModuleLoader__.load({
       'add.hint': 'Ctrl+Enter adds',
       'add.noWorkspace': 'No workspace yet',
       'group.open': '{count} open',
+      'page.allDone': 'Nothing open. Completed cards wait in the area below.',
+      'section.done': 'Completed · {count}',
+      'section.toggle': 'Show or hide completed todos',
+      'card.updated': 'Updated {time}',
       'card.done': 'Done',
       'card.open': 'Open',
       'row.toggle': 'Toggle “{text}”',
@@ -107,6 +111,10 @@ window.__ModuleLoader__.load({
       'add.hint': 'Ctrl+Enter 添加',
       'add.noWorkspace': '暂无工作区',
       'group.open': '{count} 条未完成',
+      'page.allDone': '没有未完成的待办，已完成的收纳在下方。',
+      'section.done': '已完成 · {count}',
+      'section.toggle': '展开或收起已完成待办',
+      'card.updated': '修改于 {time}',
       'card.done': '已完成',
       'card.open': '未完成',
       'row.toggle': '切换「{text}」的完成状态',
@@ -163,6 +171,7 @@ window.__ModuleLoader__.load({
       if (typeof parsed !== 'object' || parsed === null || !Array.isArray(parsed.items)) {
         throw new Error(`todo board: the old browser-stored list at "${LEGACY_KEY}" is not readable`)
       }
+      const known = new Set()
       for (const entry of parsed.items) {
         if (typeof entry !== 'object' || entry === null || typeof entry.text !== 'string') {
           throw new Error(`todo board: the old browser-stored list at "${LEGACY_KEY}" has an unreadable entry`)
@@ -178,8 +187,14 @@ window.__ModuleLoader__.load({
           workspace: workspacePath,
           label: typeof entry.workspaceLabel === 'string' ? entry.workspaceLabel : undefined,
         })
+        // The Host answers newest-modified first, so the card just added need
+        // not be last; it is the one whose id was not in the previous answer.
+        const created = added.items.find(item => !known.has(item.id))
+        if (created === undefined) {
+          throw new Error(`todo board: the Host did not return the card it just added for "${entry.text}"`)
+        }
+        known.add(created.id)
         if (entry.done === true) {
-          const created = added.items[added.items.length - 1]
           await board.update({ id: created.id, done: true })
         }
       }
@@ -411,6 +426,23 @@ window.__ModuleLoader__.load({
     }
 
     /**
+     * Show a stored ISO timestamp as local `YYYY-MM-DD HH:mm`.
+     *
+     * The format is fixed rather than read from the browser's locale, so a
+     * screenshot and the stored value always agree on the order of the parts.
+     *
+     * @param value - the stored timestamp.
+     * @returns the local time, or the raw value when it does not parse.
+     */
+    function formatStamp(value) {
+      const date = new Date(value)
+      if (Number.isNaN(date.getTime())) return value
+      const pad = number => String(number).padStart(2, '0')
+      return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} `
+        + `${pad(date.getHours())}:${pad(date.getMinutes())}`
+    }
+
+    /**
      * Group notebook records by the workspace path they carry.
      *
      * Groups follow the workspace service's own order, so the page reads in the
@@ -564,11 +596,12 @@ window.__ModuleLoader__.load({
 
     /**
      * One card per record, wired to an editor.
-     * @param props - `t`, the records, the editor, and the list's class name.
+     * @param props - `t`, the records, the editor, the list's class name, and
+     *   whether each card names its workspace.
      * @returns the list element.
      */
     function TodoCardList(props) {
-      const { t, items, editor, className } = props
+      const { t, items, editor, className, showWorkspace } = props
       return h('ul', { className },
         items.map(item => h(TodoCard, {
           key: item.id,
@@ -582,10 +615,65 @@ window.__ModuleLoader__.load({
           onSaveEdit: editor.save,
           onToggle: editor.toggle,
           onDelete: editor.remove,
+          showWorkspace,
         })))
     }
 
+    /**
+     * The folded area that holds completed cards.
+     *
+     * It starts collapsed on every mount, so open cards stay at the top; its
+     * header is a button that shows or hides the cards underneath. With no
+     * completed record the section renders nothing at all.
+     *
+     * @param props - `t`, the completed records, the shared editor, the list's
+     *   class name, and whether each card names its workspace.
+     * @returns the section element, or null when no record is completed.
+     */
+    function CompletedSection(props) {
+      const { t, items, editor, className, showWorkspace } = props
+      const [open, setOpen] = React.useState(false)
+      if (items.length === 0) return null
+      return h('section', { className: 'dsh-todo-done' },
+        h('button', {
+          type: 'button',
+          className: 'dsh-todo-doneHead',
+          'aria-expanded': open,
+          'aria-label': t('section.toggle'),
+          onClick: () => { setOpen(value => !value) },
+        },
+        h(ChevronGlyph, { open }),
+        h('span', { className: 'dsh-todo-doneTitle' }, t('section.done', { count: items.length }))),
+        open
+          ? h(TodoCardList, { t, items, editor, className, showWorkspace })
+          : null)
+    }
+
     // ------------------------------------------------------------- components
+
+    /**
+     * Inline chevron for the completed area's header.
+     * @param props - `open`, whether the section is expanded.
+     * @returns the icon element, in the current text colour.
+     */
+    function ChevronGlyph(props) {
+      return h('svg', {
+        viewBox: '0 0 16 16',
+        width: 14,
+        height: 14,
+        className: 'dsh-todo-chevron',
+        'data-open': props.open === true ? 'true' : 'false',
+        'aria-hidden': true,
+        focusable: 'false',
+      }, h('path', {
+        d: 'M6 3.5 10.5 8 6 12.5',
+        fill: 'none',
+        stroke: 'currentColor',
+        strokeWidth: 1.4,
+        strokeLinecap: 'round',
+        strokeLinejoin: 'round',
+      }))
+    }
 
     /**
      * Inline pencil glyph for a card's edit control.
@@ -681,15 +769,19 @@ window.__ModuleLoader__.load({
     }
 
     /**
-     * One todo card: a head with the completion control and actions, then the
-     * Markdown body. While editing, the body becomes a textarea and two buttons.
+     * One todo card: a head with the completion control and actions, the
+     * Markdown body, then a meta line with the modification time. While
+     * editing, the body becomes a textarea and two buttons.
      *
-     * @param props - the translated strings, the item, its editing state and the
-     *   card's callbacks.
+     * @param props - the translated strings, the item, its editing state, the
+     *   card's callbacks, and whether the card names its workspace.
      * @returns the list item element.
      */
     function TodoCard(props) {
-      const { t, item, editing, draft, onDraftChange, onStartEdit, onCancelEdit, onSaveEdit, onToggle, onDelete } = props
+      const {
+        t, item, editing, draft, onDraftChange, onStartEdit, onCancelEdit, onSaveEdit, onToggle, onDelete,
+        showWorkspace,
+      } = props
       const blocks = React.useMemo(() => (editing ? [] : parseBlocks(item.text)), [editing, item.text])
 
       return h('li', { className: 'dsh-todo-card', 'data-done': item.done ? 'true' : 'false' },
@@ -751,7 +843,18 @@ window.__ModuleLoader__.load({
                 disabled: draft.trim() === '',
                 onClick: onSaveEdit,
               }, t('edit.save'))))
-          : h('div', { className: 'dsh-todo-md' }, renderMarkdown(blocks)))
+          : h('div', { className: 'dsh-todo-md' }, renderMarkdown(blocks)),
+        h('div', { className: 'dsh-todo-meta' },
+          h('span', {
+            className: 'dsh-todo-metaTime',
+            title: item.updatedAt,
+          }, t('card.updated', { time: formatStamp(item.updatedAt) })),
+          showWorkspace === true
+            ? h('span', {
+              className: 'dsh-todo-metaWorkspace',
+              title: item.workspacePath,
+            }, item.workspaceLabel)
+            : null))
     }
 
     /**
@@ -806,9 +909,17 @@ window.__ModuleLoader__.load({
         ? draftWorkspacePath
         : (options.length > 0 ? options[0].path : '')
 
+      const openItems = React.useMemo(
+        () => (items === null ? [] : items.filter(item => !item.done)),
+        [items],
+      )
+      const doneItems = React.useMemo(
+        () => (items === null ? [] : items.filter(item => item.done)),
+        [items],
+      )
       const groups = React.useMemo(
-        () => (items === null ? [] : groupItems(items, workspaces)),
-        [items, workspaces],
+        () => groupItems(openItems, workspaces),
+        [openItems, workspaces],
       )
 
       const addTodo = async () => {
@@ -879,21 +990,33 @@ window.__ModuleLoader__.load({
             error === null ? null : h('p', { className: 'dsh-todo-error', role: 'alert' }, error),
             items === null
               ? h('p', { className: 'dsh-todo-empty' }, t('page.loadingBoard'))
-              : (groups.length === 0
+              : items.length === 0
                 ? h('p', { className: 'dsh-todo-empty' }, t('page.empty'))
-                : h('div', { className: 'dsh-todo-groups' },
-                  groups.map(group => h('section', { key: group.key, className: 'dsh-todo-group' },
-                    h('div', { className: 'dsh-todo-groupHead' },
-                      h('h2', { className: 'dsh-todo-groupTitle', title: group.title }, group.title),
-                      h('span', { className: 'dsh-todo-groupCount' }, t('group.open', {
-                        count: group.items.filter(item => !item.done).length,
-                      }))),
-                    h(TodoCardList, {
-                      t,
-                      items: group.items,
-                      editor,
-                      className: 'dsh-todo-cards',
-                    }))))))))
+                : [
+                  groups.length === 0
+                    ? h('p', { key: 'allDone', className: 'dsh-todo-empty' }, t('page.allDone'))
+                    : h('div', { key: 'groups', className: 'dsh-todo-groups' },
+                      groups.map(group => h('section', { key: group.key, className: 'dsh-todo-group' },
+                        h('div', { className: 'dsh-todo-groupHead' },
+                          h('h2', { className: 'dsh-todo-groupTitle', title: group.title }, group.title),
+                          h('span', { className: 'dsh-todo-groupCount' }, t('group.open', {
+                            count: group.items.length,
+                          }))),
+                        h(TodoCardList, {
+                          t,
+                          items: group.items,
+                          editor,
+                          className: 'dsh-todo-cards',
+                        })))),
+                  h(CompletedSection, {
+                    key: 'done',
+                    t,
+                    items: doneItems,
+                    editor,
+                    className: 'dsh-todo-cards',
+                    showWorkspace: true,
+                  }),
+                ])))
     }
 
     /**
@@ -927,6 +1050,15 @@ window.__ModuleLoader__.load({
           : items.filter(item => pathKey(item.workspacePath) === key)
       ), [items, key])
 
+      const openItems = React.useMemo(
+        () => visible.filter(item => !item.done),
+        [visible],
+      )
+      const doneItems = React.useMemo(
+        () => visible.filter(item => item.done),
+        [visible],
+      )
+
       const addTodo = async () => {
         const text = draftText.trim()
         if (text === '' || workspace === undefined) return
@@ -951,7 +1083,7 @@ window.__ModuleLoader__.load({
               title: workspace.path,
             }, workspaceLabel(workspace)),
             h('span', { className: 'dsh-todo-panelCount' }, t('group.open', {
-              count: visible.filter(item => !item.done).length,
+              count: openItems.length,
             }))),
         workspace === undefined
           ? (ready ? h('p', { className: 'dsh-todo-empty' }, t('panel.noWorkspace')) : null)
@@ -984,15 +1116,26 @@ window.__ModuleLoader__.load({
             error === null ? null : h('p', { key: 'error', className: 'dsh-todo-error', role: 'alert' }, error),
             items === null
               ? h('p', { key: 'loading', className: 'dsh-todo-empty' }, t('page.loadingBoard'))
-              : (visible.length === 0
+              : visible.length === 0
                 ? h('p', { key: 'empty', className: 'dsh-todo-empty' }, t('page.empty'))
-                : h(TodoCardList, {
-                  key: 'cards',
-                  t,
-                  items: visible,
-                  editor,
-                  className: 'dsh-todo-panelCards',
-                })),
+                : [
+                  openItems.length === 0
+                    ? h('p', { key: 'allDone', className: 'dsh-todo-empty' }, t('page.allDone'))
+                    : h(TodoCardList, {
+                      key: 'cards',
+                      t,
+                      items: openItems,
+                      editor,
+                      className: 'dsh-todo-panelCards',
+                    }),
+                  h(CompletedSection, {
+                    key: 'done',
+                    t,
+                    items: doneItems,
+                    editor,
+                    className: 'dsh-todo-panelCards',
+                  }),
+                ],
           ])
     }
 
@@ -1213,6 +1356,48 @@ html[data-platform='darwin'] .dsh-todo-head {
   line-height: 18px;
   color: var(--dsw-alias-label-tertiary);
 }
+/* ------------------------------------------------------ completed area */
+.dsh-todo-done {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 0;
+}
+.dsh-todo-doneHead {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  box-sizing: border-box;
+  width: 100%;
+  padding: 7px 10px;
+  font: inherit;
+  color: var(--dsw-alias-label-secondary);
+  background: transparent;
+  border: 0.5px solid var(--dsw-alias-border-l3);
+  border-radius: var(--dsw-radius-md);
+  cursor: pointer;
+}
+.dsh-todo-doneTitle {
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 20px;
+}
+.dsh-todo-chevron {
+  flex: none;
+  transition: transform 120ms ease;
+}
+.dsh-todo-chevron[data-open='true'] {
+  transform: rotate(90deg);
+}
+.dsh-todo-doneHead:focus-visible {
+  outline: var(--dsw-focus-ring-width) solid var(--dsw-focus-ring-color, var(--dsw-alias-state-business-primary));
+  outline-offset: 1px;
+}
+@media (hover: hover) {
+  .dsh-todo-doneHead:hover {
+    background: var(--dsw-alias-interactive-bg-hover);
+  }
+}
 .dsh-todo-cards {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
@@ -1377,6 +1562,26 @@ h6.dsh-todo-mdH { font-size: 13px; }
   margin: 10px 0;
   border: 0;
   border-top: 0.5px solid var(--dsw-alias-border-l3);
+}
+/* --------------------------------------------------------- card meta */
+.dsh-todo-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px 10px;
+  min-width: 0;
+  font-size: 12px;
+  line-height: 18px;
+  color: var(--dsw-alias-label-tertiary);
+}
+.dsh-todo-metaTime {
+  flex: none;
+  font-variant-numeric: tabular-nums;
+}
+.dsh-todo-metaWorkspace {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 /* ------------------------------------------------------------ editing */
 .dsh-todo-editor {
