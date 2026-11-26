@@ -110,6 +110,10 @@ window.__ModuleLoader__.load({
       'row.toggle': 'Toggle “{text}”',
       'row.edit': 'Edit “{text}”',
       'row.delete': 'Delete “{text}”',
+      'edit.title': 'Edit todo',
+      'edit.maximize': 'Maximize',
+      'edit.restore': 'Restore size',
+      'edit.close': 'Close editor',
       'edit.label': 'Todo text (Markdown)',
       'edit.save': 'Save',
       'edit.cancel': 'Cancel',
@@ -165,6 +169,10 @@ window.__ModuleLoader__.load({
       'row.toggle': '切换「{text}」的完成状态',
       'row.edit': '编辑「{text}」',
       'row.delete': '删除「{text}」',
+      'edit.title': '编辑待办',
+      'edit.maximize': '最大化',
+      'edit.restore': '还原大小',
+      'edit.close': '关闭编辑器',
       'edit.label': '待办内容（Markdown）',
       'edit.save': '保存',
       'edit.cancel': '取消',
@@ -705,12 +713,7 @@ window.__ModuleLoader__.load({
           key: item.id,
           t,
           item,
-          editing: editor.editingId === item.id,
-          draft: editor.editingText,
-          onDraftChange: editor.setEditingText,
           onStartEdit: editor.start,
-          onCancelEdit: editor.cancel,
-          onSaveEdit: editor.save,
           onToggle: editor.toggle,
           onDelete: editor.remove,
           showWorkspace,
@@ -874,6 +877,79 @@ window.__ModuleLoader__.load({
     }
 
     /**
+     * Inline maximize glyph for the editor's header.
+     * @returns the icon element, in the current text colour.
+     */
+    function MaximizeGlyph() {
+      return h('svg', {
+        viewBox: '0 0 16 16',
+        width: 14,
+        height: 14,
+        'aria-hidden': true,
+        focusable: 'false',
+      }, h('path', {
+        d: 'M9.6 2.8h3.6v3.6M6.4 13.2H2.8V9.6M13.2 2.8 9.9 6.1M2.8 13.2l3.3-3.3',
+        fill: 'none',
+        stroke: 'currentColor',
+        strokeWidth: 1.3,
+        strokeLinecap: 'round',
+        strokeLinejoin: 'round',
+      }))
+    }
+
+    /**
+     * Inline restore glyph for the maximized editor's header.
+     * @returns the icon element, in the current text colour.
+     */
+    function RestoreGlyph() {
+      return h('svg', {
+        viewBox: '0 0 16 16',
+        width: 14,
+        height: 14,
+        'aria-hidden': true,
+        focusable: 'false',
+      },
+      h('path', {
+        d: 'M5.6 5.6V3.2h7.2v7.2h-2.4',
+        fill: 'none',
+        stroke: 'currentColor',
+        strokeWidth: 1.3,
+        strokeLinecap: 'round',
+        strokeLinejoin: 'round',
+      }),
+      h('rect', {
+        x: 3.2,
+        y: 5.6,
+        width: 7.2,
+        height: 7.2,
+        rx: 1.2,
+        fill: 'none',
+        stroke: 'currentColor',
+        strokeWidth: 1.3,
+      }))
+    }
+
+    /**
+     * Inline close glyph for the editor's header.
+     * @returns the icon element, in the current text colour.
+     */
+    function CloseGlyph() {
+      return h('svg', {
+        viewBox: '0 0 16 16',
+        width: 14,
+        height: 14,
+        'aria-hidden': true,
+        focusable: 'false',
+      }, h('path', {
+        d: 'M4.2 4.2 11.8 11.8M11.8 4.2 4.2 11.8',
+        fill: 'none',
+        stroke: 'currentColor',
+        strokeWidth: 1.3,
+        strokeLinecap: 'round',
+      }))
+    }
+
+    /**
      * Inline check glyph shown once a card was sent.
      * @returns the icon element, in the current text colour.
      */
@@ -949,17 +1025,17 @@ window.__ModuleLoader__.load({
     /**
      * One todo card: a head with the completion control, the execute and
      * explain controls and the other actions, the Markdown body, then a meta
-     * line with the short id and the modification time. While editing, the body
-     * becomes a textarea and two buttons.
+     * line with the short id and the modification time. Editing happens in
+     * {@link TodoEditorDialog}, not inside the card.
      *
-     * @param props - the translated strings, the item, its editing state, the
-     *   card's callbacks, whether the card names its workspace, and whether it
-     *   can send itself into a conversation.
+     * @param props - the translated strings, the item, its callbacks, whether
+     *   the card names its workspace, and whether it can send itself into a
+     *   conversation.
      * @returns the list item element.
      */
     function TodoCard(props) {
       const {
-        t, item, editing, draft, onDraftChange, onStartEdit, onCancelEdit, onSaveEdit, onToggle, onDelete,
+        t, item, onStartEdit, onToggle, onDelete,
         showWorkspace, onSend, canSend, onSendError,
       } = props
       const [sendStates, setSendStates] = React.useState({ execute: 'idle', explain: 'idle' })
@@ -968,7 +1044,7 @@ window.__ModuleLoader__.load({
         window.clearTimeout(sendTimers.current.execute)
         window.clearTimeout(sendTimers.current.explain)
       }, [])
-      const blocks = React.useMemo(() => (editing ? [] : parseBlocks(item.text)), [editing, item.text])
+      const blocks = React.useMemo(() => parseBlocks(item.text), [item.text])
 
       const triggerSend = async (kind) => {
         if (canSend !== true || sendStates[kind] === 'sending') return
@@ -1024,41 +1100,7 @@ window.__ModuleLoader__.load({
               'aria-label': t('row.delete', { text: item.text }),
               onClick: () => { onDelete(item.id) },
             }, h(TrashGlyph)))),
-        editing
-          ? h('div', { className: 'dsh-todo-editor' },
-            h('textarea', {
-              className: 'dsh-todo-input dsh-todo-textarea',
-              value: draft,
-              rows: 5,
-              'aria-label': t('edit.label'),
-              autoFocus: true,
-              onChange: (event) => { onDraftChange(event.target.value) },
-              onKeyDown: (event) => {
-                if (event.key === 'Escape') {
-                  event.preventDefault()
-                  onCancelEdit()
-                  return
-                }
-                if (event.key === 'Enter' && (event.ctrlKey || event.metaKey)) {
-                  event.preventDefault()
-                  onSaveEdit()
-                }
-              },
-            }),
-            h('div', { className: 'dsh-todo-editorBar' },
-              h('span', { className: 'dsh-todo-hint' }, t('edit.hint')),
-              h('button', {
-                type: 'button',
-                className: 'dsh-todo-outline',
-                onClick: onCancelEdit,
-              }, t('edit.cancel')),
-              h('button', {
-                type: 'button',
-                className: 'dsh-todo-primary',
-                disabled: draft.trim() === '',
-                onClick: onSaveEdit,
-              }, t('edit.save'))))
-          : h('div', { className: 'dsh-todo-md' }, renderMarkdown(blocks)),
+        h('div', { className: 'dsh-todo-md' }, renderMarkdown(blocks)),
         h('div', { className: 'dsh-todo-meta' },
           h('span', {
             className: 'dsh-todo-metaId',
@@ -1074,6 +1116,97 @@ window.__ModuleLoader__.load({
               title: item.workspacePath,
             }, item.workspaceLabel)
             : null))
+    }
+
+    /**
+     * The editing dialog: one large modal over the whole window.
+     *
+     * A native `<dialog>` opened with `showModal()` lives in the browser's top
+     * layer, so it is centred in the viewport even inside the right-Sidebar
+     * pane's transformed column, blocks the rest of the page, traps Tab and
+     * turns Escape into a cancel. The dialog is resizable from its bottom-right
+     * corner and toggles between that size and the whole window.
+     *
+     * @param props - `t`, the edited item, its draft, and the draft, cancel and
+     *   save callbacks.
+     * @returns the dialog element.
+     */
+    function TodoEditorDialog(props) {
+      const { t, item, draft, onDraftChange, onCancel, onSave } = props
+      const dialogRef = React.useRef(null)
+      const textRef = React.useRef(null)
+      const cancelRef = React.useRef(onCancel)
+      cancelRef.current = onCancel
+      const [maximized, setMaximized] = React.useState(false)
+
+      React.useEffect(() => {
+        const dialog = dialogRef.current
+        if (dialog === null) return undefined
+        if (!dialog.open) dialog.showModal()
+        const onNativeCancel = (event) => {
+          event.preventDefault()
+          cancelRef.current()
+        }
+        dialog.addEventListener('cancel', onNativeCancel)
+        if (textRef.current !== null) textRef.current.focus()
+        return () => {
+          dialog.removeEventListener('cancel', onNativeCancel)
+          if (dialog.open) dialog.close()
+        }
+      }, [])
+
+      return h('dialog', {
+        ref: dialogRef,
+        className: 'dsh-todo-dialog',
+        'data-maximized': maximized ? 'true' : 'false',
+        'aria-label': t('edit.title'),
+      },
+      h('div', { className: 'dsh-todo-dialogInner' },
+        h('header', { className: 'dsh-todo-dialogHead' },
+          h('span', { className: 'dsh-todo-dialogTitle' }, t('edit.title')),
+          h('span', { className: 'dsh-todo-metaId', title: t('card.id', { id: item.id }) }, `#${shortId(item)}`),
+          h('span', { className: 'dsh-todo-dialogActions' },
+            h('button', {
+              type: 'button',
+              className: 'dsh-todo-iconButton',
+              'aria-label': maximized ? t('edit.restore') : t('edit.maximize'),
+              title: maximized ? t('edit.restore') : t('edit.maximize'),
+              onClick: () => { setMaximized(value => !value) },
+            }, maximized ? h(RestoreGlyph) : h(MaximizeGlyph)),
+            h('button', {
+              type: 'button',
+              className: 'dsh-todo-iconButton',
+              'aria-label': t('edit.close'),
+              title: t('edit.close'),
+              onClick: onCancel,
+            }, h(CloseGlyph)))),
+        h('div', { className: 'dsh-todo-dialogBody' },
+          h('textarea', {
+            ref: textRef,
+            className: 'dsh-todo-input dsh-todo-textarea dsh-todo-dialogText',
+            value: draft,
+            'aria-label': t('edit.label'),
+            onChange: (event) => { onDraftChange(event.target.value) },
+            onKeyDown: (event) => {
+              if (event.key === 'Enter' && (event.ctrlKey || event.metaKey)) {
+                event.preventDefault()
+                onSave()
+              }
+            },
+          })),
+        h('footer', { className: 'dsh-todo-dialogFoot' },
+          h('span', { className: 'dsh-todo-hint' }, t('edit.hint')),
+          h('button', {
+            type: 'button',
+            className: 'dsh-todo-outline',
+            onClick: onCancel,
+          }, t('edit.cancel')),
+          h('button', {
+            type: 'button',
+            className: 'dsh-todo-primary',
+            disabled: draft.trim() === '',
+            onClick: onSave,
+          }, t('edit.save')))))
     }
 
     /**
@@ -1146,6 +1279,7 @@ window.__ModuleLoader__.load({
         () => groupItems(openItems, workspaces),
         [openItems, workspaces],
       )
+      const editingItem = items === null ? undefined : items.find(candidate => candidate.id === editor.editingId)
 
       const addTodo = async () => {
         const text = draftText.trim()
@@ -1252,7 +1386,15 @@ window.__ModuleLoader__.load({
                     canSend: sessionId !== undefined,
                     onSendError: report,
                   }),
-                ])))
+                ])),
+        editingItem === undefined ? null : h(TodoEditorDialog, {
+          t,
+          item: editingItem,
+          draft: editor.editingText,
+          onDraftChange: editor.setEditingText,
+          onCancel: editor.cancel,
+          onSave: editor.save,
+        }))
     }
 
     /**
@@ -1294,6 +1436,7 @@ window.__ModuleLoader__.load({
         () => visible.filter(item => item.done),
         [visible],
       )
+      const editingItem = items === null ? undefined : items.find(candidate => candidate.id === editor.editingId)
 
       const addTodo = async () => {
         const text = draftText.trim()
@@ -1383,7 +1526,15 @@ window.__ModuleLoader__.load({
                     onSendError: report,
                   }),
                 ],
-          ])
+          ],
+        editingItem === undefined ? null : h(TodoEditorDialog, {
+          t,
+          item: editingItem,
+          draft: editor.editingText,
+          onDraftChange: editor.setEditingText,
+          onCancel: editor.cancel,
+          onSave: editor.save,
+        }))
     }
 
     // ---------------------------------------------------------------- styles
@@ -1846,17 +1997,95 @@ h6.dsh-todo-mdH { font-size: 13px; }
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-/* ------------------------------------------------------------ editing */
-.dsh-todo-editor {
+/* ------------------------------------------------------------ editor */
+/* One scrim value rather than a theme token: a modal backdrop must stay
+   translucent in both themes, and no --dsw-alias-* token promises that. */
+.dsh-todo-dialog {
+  box-sizing: border-box;
+  width: min(920px, 92vw);
+  height: min(640px, 85vh);
+  min-width: 360px;
+  min-height: 240px;
+  max-width: 92vw;
+  max-height: 90vh;
+  padding: 0;
+  color: var(--dsw-alias-label-primary);
+  background: var(--dsw-alias-bg-layer-1);
+  border: 0.5px solid var(--dsw-alias-border-l3);
+  border-radius: var(--dsw-radius-lg);
+  box-shadow: var(--dsw-shadow-sm, none);
+  overflow: hidden;
+  resize: both;
+}
+.dsh-todo-dialog::backdrop {
+  background: rgb(0 0 0 / 40%);
+}
+.dsh-todo-dialog[data-maximized='true'] {
+  /* !important: a manual resize writes inline width/height, which must lose
+     while the dialog fills the window. */
+  inset: 0 !important;
+  width: 100vw !important;
+  height: 100vh !important;
+  max-width: none !important;
+  max-height: none !important;
+  margin: 0;
+  border: 0;
+  border-radius: 0;
+  resize: none;
+}
+.dsh-todo-dialogInner {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  box-sizing: border-box;
+  height: 100%;
+  min-height: 0;
 }
-.dsh-todo-editorBar {
+.dsh-todo-dialogHead {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  box-sizing: border-box;
+  padding: 10px 12px;
+  border-bottom: 0.5px solid var(--dsw-alias-border-l3);
+}
+.dsh-todo-dialogTitle {
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 22px;
+}
+.dsh-todo-dialogActions {
+  flex: none;
+  display: inline-flex;
+  gap: 2px;
+  margin-left: auto;
+}
+.dsh-todo-dialogBody {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  box-sizing: border-box;
+  padding: 12px;
+}
+.dsh-todo-dialogText {
+  flex: 1;
+  width: 100%;
+  height: auto;
+  min-height: 0;
+  resize: none;
+  font-family: inherit;
+  font-size: 13px;
+  line-height: 20px;
+}
+.dsh-todo-dialogFoot {
+  flex: none;
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   gap: 8px;
+  box-sizing: border-box;
+  padding: 10px 12px;
+  border-top: 0.5px solid var(--dsw-alias-border-l3);
 }
 .dsh-todo-empty {
   margin: 0;

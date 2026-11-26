@@ -23,6 +23,11 @@ the human edits and a tool the agent edits — both on the same JSON file.
   the first eight hex digits of the stored UUID, stable for the card's lifetime
   and unique without a counter. The badge is what you quote; the agent sees the
   full id in tool results.
+- **A real editor, not a text field in the card.** The pencil opens a large
+  modal over the window: drag its bottom-right corner to resize it, the
+  maximise button fills the screen, Esc or Close discards the draft and
+  Ctrl/Cmd+Enter saves. The dialog is a native `<dialog>` in the browser's top
+  layer, so the rest of the page stays inert while it is open.
 - **Two controls per card.** *Execute todo* sends the card into a Session as an
   ordinary user message asking the agent to do the work; *Explain todo* sends
   the same card asking the agent to explain it first — what it asks for, why,
@@ -71,8 +76,9 @@ builtins.
 
 **Left sidebar → Workspace todos** opens the full board in the centre column:
 one group per workspace, a card per todo, an add card at the top (pick the
-workspace, Ctrl/Cmd+Enter adds), a checkbox for done, a pencil to edit the
-Markdown source, a bin to delete. **Back to conversation** returns to the chat.
+workspace, Ctrl/Cmd+Enter adds), a checkbox for done, a pencil that opens the
+Markdown editor dialog, a bin to delete. **Back to conversation** returns to
+the chat.
 Ticking a card moves it into the *Completed* area at the bottom, which starts
 folded; its header reopens the card, and unticking it there puts the card back
 among the open ones. Two card controls send it into the last conversation that
@@ -187,6 +193,12 @@ rendered as plain text.
 
 ## Verification
 
+Checked for 1.3.0: `node --check` on both entry points; the Host harness
+(unchanged by the editor); the load-and-apply pass over the browser half; and a
+static review of the editor — a native `<dialog>` opened with `showModal()`, a
+`cancel` listener that maps Escape to the cancel path, Ctrl/Cmd+Enter on the
+textarea, and the dialog mounted by both surfaces from the shared editing state.
+
 Checked for 1.2.0: `node --check` on both entry points; the Host harness against
 a throwaway `DSH_HOME` (unchanged by this release, still covering the store,
 timestamps, ordering and the Fetch envelope); and the load-and-apply pass over
@@ -206,11 +218,12 @@ The 1.0.0 release was additionally checked with the installed
 with a minimal React stand-in, and live use in the Desktop app (activation, tool
 round trip, authenticated route, centre page).
 
-**Not verified:** the folded *Completed* area, the timestamp line, the id badge
-and the two card controls have not been looked at in a running app — no browser
-control was available here. Both send paths follow the composer's own
-`Session.prompt` call and the last-on-screen Session source, but a live send has
-not been exercised.
+**Not verified:** the folded *Completed* area, the timestamp line, the id badge,
+the two card controls and the editor dialog have not been looked at in a running
+app — no browser control was available here. Both send paths follow the
+composer's own `Session.prompt` call and the last-on-screen Session source, but
+a live send has not been exercised; the dialog's resize grip and maximise state
+have likewise not been observed.
 
 ## License
 
