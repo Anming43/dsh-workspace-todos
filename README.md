@@ -16,12 +16,17 @@ and summary on the card, the full details in a dialog.
 - **Title, summary, details.** Every todo is three fields: a one-line title, a
   short plain-text summary and a Markdown body of details. The card shows the
   first two; the details open in a dialog when the card is clicked.
-- **Read-only for people.** The page has no add, edit, tick or delete control.
-  The agent owns every change through the `workspace_todos` tool, so the board
-  always reflects what the agent wrote. Clicking a card opens the read-only
-  detail dialog — resizable from its corner, maximisable, Esc closes it.
-- **Completed work folds away.** A completed card leaves its workspace group and
-  moves into one *Completed* area at the bottom, collapsed by default; the
+- **Two completion states.** `done` is the agent's own flag, set when its work is
+  finished; `confirmed` is the user's acceptance, flipped by the *Confirm done*
+  control on the card or by the agent when the user asks it to relay that. They
+  are independent: a card can be AI-finished but still pending confirmation, and
+  confirming it does not claim the AI finished.
+- **Read-only apart from that confirmation.** The page has no add, edit or delete
+  control for content: the agent owns the title, summary, details and both flags
+  through the `workspace_todos` tool. Clicking a card opens the read-only detail
+  dialog — resizable from its corner, maximisable, Esc closes it.
+- **Confirmed work folds away.** A confirmed card leaves its workspace group and
+  moves into one *Confirmed* area at the bottom, collapsed by default; the
   right-Sidebar panel keeps the same area for its workspace only.
 - **Newest edit first.** Every card stores when it was last modified
   (`updatedAt`, shown as `2026-11-25 17:40`), and both surfaces list cards
@@ -67,10 +72,11 @@ builtins.
 ## Using it
 
 **Left sidebar → Workspace todos** opens the full board in the centre column:
-one group per workspace, a card per todo showing its status, title, summary and
-metadata. Clicking a card opens its detail dialog with the Markdown body, the
-status, workspace, update and creation times, and a copy control for the id.
-**Back to conversation** returns to the chat.
+one group per workspace, a card per todo showing the AI status, the *Confirm
+done* control, title, summary and metadata. Clicking a card opens its detail
+dialog with the Markdown body, both statuses, the workspace, update and creation
+times, and a copy control for the id. **Back to conversation** returns to the
+chat.
 
 **Right Sidebar → + → Workspace todos** opens a panel scoped to the shown
 Session's workspace: it lists only that workspace's cards, with the same detail
@@ -85,12 +91,17 @@ makes appears without a reload.
 |---|---|---|
 | `list` | `workspace` (optional filter: path, path fragment, or label) | returns every card, or the matching ones, newest-modified first |
 | `add` | `title`, `workspace` (absolute directory), `summary` and `details` (optional), `label` (optional, defaults to the directory name) | appends one open card |
-| `update` | `id` plus any of `title`, `summary`, `details`, `done`, `workspace`, `label` | changes that card; an empty `summary` or `details` clears it |
+| `update` | `id` plus any of `title`, `summary`, `details`, `done`, `confirmed`, `workspace`, `label` | changes that card; an empty `summary` or `details` clears it |
 | `remove` | `id` | deletes that card |
 
-Every action returns the complete notebook — title, summary and Markdown
-details included — ordered newest-modified first. Ids come from a previous
-result.
+`done` is the agent's own completion flag; `confirmed` records the user's
+acceptance. The board's *Confirm* control flips `confirmed`, and the agent may
+flip it too when the user asks it to relay that decision — the two flags stay
+independent.
+
+Every action returns the complete notebook — title, summary, Markdown details
+and both flags included — ordered newest-modified first. Ids come from a
+previous result.
 
 ## Storage
 
@@ -112,6 +123,7 @@ The notebook is one file:
       "summary": "先补上鉴权和错误码两节",
       "details": "## 范围\n\n- 登录\n- 刷新 token",
       "done": false,
+      "confirmed": false,
       "createdAt": "2026-11-25T08:00:00.000Z",
       "updatedAt": "2026-11-25T09:40:00.000Z"
     }
@@ -134,6 +146,8 @@ The notebook is one file:
 - The file keeps records in the order they were added; `list` and both surfaces
   sort by `updatedAt` instead of trusting that order.
 - The `#` badge is derived from `id`, not stored.
+- `done` is the agent's completion flag and `confirmed` is the user's; both are
+  stored, and a record written before the flag existed reads as unconfirmed.
 - The page talks to the Host through the exact Fetch route
   `/api/workspace-todos` on Connection's shared channel, behind the browser's
   authentication fence.
@@ -148,13 +162,15 @@ links, task-list checkboxes, HTML, escapes — is rendered as plain text.
 
 ## Limitations
 
-- People cannot add, edit, complete or delete from the page: that is the point
-  of this release. Ask the agent, or edit the JSON file directly.
+- People cannot add, edit or delete content from the page: that is the point of
+  this release. The only human action is *Confirm done*, which flips the user's
+  own `confirmed` flag; the agent can flip the same flag when asked, and also
+  owns `done`. Ask the agent for anything else, or edit the JSON file directly.
 - One file, one notebook: two DSH processes sharing one `DSH_HOME` write the
   same file, with no cross-process lock (last writer wins per operation).
 - Surfaces poll every 3 seconds rather than receiving a push, so a change the
   agent makes can lag by up to that interval.
-- The *Completed* area starts folded every time a surface mounts; its open state
+- The *Confirmed* area starts folded every time a surface mounts; its open state
   is not remembered.
 - The centre page sends into the last conversation it saw on screen. With no
   conversation opened since startup, both controls stay disabled; the
@@ -182,24 +198,27 @@ links, task-list checkboxes, HTML, escapes — is rendered as plain text.
 
 ## Verification
 
-Checked for 2.0.0: `node --check` on both entry points; the Host harness against
-a throwaway `DSH_HOME` — add with the split fields, update and clearing of
-summary/details, the stored JSON shape, newest-first ordering, a record written
-with only `text` read as details with a derived title and rewritten in the split
-form, foreign-version and malformed refusals, workspace filters, remove, and the
-Fetch envelope; the load-and-apply pass over the browser half; and the locale
-dictionary parity check (38 keys per language).
+Checked for 2.2.0: `node --check` on both entry points; the Host harness extended
+so the tool schema exposes `confirmed` as a boolean the agent may set, alongside
+the existing checks that `update` flips it without touching `done`, that the flag
+is stored, and that an older record reads as unconfirmed; the browser-half
+registration pass; and the locale parity check (43 keys per language).
+
+Checked for 2.0.0: the Host harness against a throwaway `DSH_HOME` — add with
+the split fields, update and clearing of summary/details, the stored JSON shape,
+newest-first ordering, a record written with only `text` read as details with a
+derived title and rewritten in the split form, foreign-version and malformed
+refusals, workspace filters, remove, and the Fetch envelope.
 
 Checked for 1.4.0 and earlier: the Host harness for the previous record shape,
 the browser-half registration pass, a Markdown parser suite, a render pass with
 a minimal React stand-in, and live use in the Desktop app for 1.0.0.
 
-**Not verified:** the card layout, the id badge, the copy control, the two card
-controls and the detail dialog have not been looked at in a running app — no
-browser control was available here. The send paths follow the composer's own
-`Session.prompt` call and the last-on-screen Session source, but a live send has
-not been exercised; the dialog's resize grip and maximise state have likewise
-not been observed.
+**Not verified:** the card layout, the two statuses and the confirm control, the
+id badge, the copy control and the detail dialog have not been looked at in a
+running app — no browser control was available here. The confirmation write goes
+through the same board route as every other page call, but a live click has not
+been exercised; the send paths and the dialog's resize grip likewise.
 
 ## License
 

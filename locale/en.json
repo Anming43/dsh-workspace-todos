@@ -1,6 +1,6 @@
 {
   "meta": {
     "title": "Workspace todos",
-    "description": "A read-only todo board opened from the left sidebar and shared by every workspace. Each todo carries the workspace directory it belongs to and is split into a title, a summary and Markdown details; the page groups cards by workspace, a click opens the detail dialog, and \"Back to conversation\" returns to the chat. The agent owns every change through the workspace_todos tool, and the board re-reads the file every few seconds, so its edits appear without a reload. The notebook is one JSON file at a fixed path under the Harness home (workspace-todos.json), read and written by this bundle's Host half. Turning the plugin off removes the sidebar entry, its page and the tool; the file stays on disk."
+    "description": "A todo board opened from the left sidebar and shared by every workspace. Each todo carries the workspace directory it belongs to and is split into a title, a summary and Markdown details; the page groups cards by workspace, a click opens the detail dialog, and \"Back to conversation\" returns to the chat. The agent maintains the content through the workspace_todos tool, and people confirm finished cards on the board. The board re-reads the file every few seconds, so changes appear without a reload. The notebook is one JSON file at a fixed path under the Harness home (workspace-todos.json), read and written by this bundle's Host half. Turning the plugin off removes the sidebar entry, its page and the tool; the file stays on disk."
   }
 }

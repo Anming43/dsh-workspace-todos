@@ -106,7 +106,7 @@ function normalizeItem(value, index) {
   if (typeof value !== 'object' || value === null || Array.isArray(value)) {
     throw new Error(`todo board: ${DATA_FILE} item #${index} is not an object`)
   }
-  const { id, workspacePath, workspaceLabel, title, summary, details, text, done, createdAt, updatedAt } = value
+  const { id, workspacePath, workspaceLabel, title, summary, details, text, done, confirmed, createdAt, updatedAt } = value
   if (typeof id !== 'string' || id === '') {
     throw new Error(`todo board: ${DATA_FILE} item #${index} has no id`)
   }
@@ -139,6 +139,9 @@ function normalizeItem(value, index) {
   if (typeof done !== 'boolean') {
     throw new Error(`todo board: item "${id}" has no completion flag`)
   }
+  if (confirmed !== undefined && confirmed !== null && typeof confirmed !== 'boolean') {
+    throw new Error(`todo board: item "${id}" has an invalid confirmation flag`)
+  }
   if (typeof createdAt !== 'string' || createdAt === '') {
     throw new Error(`todo board: item "${id}" has no creation time`)
   }
@@ -154,6 +157,7 @@ function normalizeItem(value, index) {
     summary: typeof summary === 'string' ? summary.trim() : '',
     details: resolvedDetails,
     done,
+    confirmed: confirmed === true,
     createdAt,
     updatedAt: typeof updatedAt === 'string' && updatedAt !== '' ? updatedAt : createdAt,
   }
@@ -333,6 +337,7 @@ async function dispatch(payload) {
         summary,
         details,
         done: false,
+        confirmed: false,
         createdAt: now,
         updatedAt: now,
       })
@@ -352,9 +357,15 @@ async function dispatch(payload) {
     if (input.done !== undefined && typeof input.done !== 'boolean') {
       throw new Error('todo board: "done" must be a boolean')
     }
+    if (input.confirmed !== undefined && typeof input.confirmed !== 'boolean') {
+      throw new Error('todo board: "confirmed" must be a boolean')
+    }
     if (title === undefined && summary === undefined && details === undefined
-      && workspacePath === undefined && label === undefined && input.done === undefined) {
-      throw new Error('todo board: "update" needs at least one of title, summary, details, done, workspace, label')
+      && workspacePath === undefined && label === undefined
+      && input.done === undefined && input.confirmed === undefined) {
+      throw new Error(
+        'todo board: "update" needs at least one of title, summary, details, done, confirmed, workspace, label',
+      )
     }
     return serialized(async () => {
       const records = await readStore()
@@ -364,6 +375,7 @@ async function dispatch(payload) {
       if (summary !== undefined) item.summary = summary
       if (details !== undefined) item.details = details
       if (input.done !== undefined) item.done = input.done
+      if (input.confirmed !== undefined) item.confirmed = input.confirmed
       if (workspacePath !== undefined) {
         item.workspacePath = workspacePath
         item.workspaceLabel = label ?? basename(workspacePath)
@@ -399,7 +411,7 @@ const TOOL_PARAMETERS = {
     action: {
       type: 'string',
       enum: ['list', 'add', 'update', 'remove'],
-      description: 'list reads the notebook; add appends one todo; update changes its title, summary, details or completion; remove deletes one todo.',
+      description: 'list reads the notebook; add appends one todo; update changes its title, summary, details, completion or confirmation; remove deletes one todo.',
     },
     workspace: {
       type: 'string',
@@ -423,7 +435,11 @@ const TOOL_PARAMETERS = {
     },
     done: {
       type: 'boolean',
-      description: 'Completion flag for update: true marks the todo done, false reopens it.',
+      description: 'The agent-side completion flag: true when your work on this todo is finished. Independent of the user’s confirmation.',
+    },
+    confirmed: {
+      type: 'boolean',
+      description: 'The user’s confirmation flag. Flip it when the user asks: true when they accept the finished todo, false to withdraw that acceptance. It is independent of `done`.',
     },
     id: {
       type: 'string',
@@ -452,11 +468,13 @@ const TOOL_OUTPUT_SCHEMA = {
           summary: { type: 'string' },
           details: { type: 'string' },
           done: { type: 'boolean' },
+          confirmed: { type: 'boolean' },
           createdAt: { type: 'string' },
           updatedAt: { type: 'string' },
         },
         required: [
-          'id', 'workspacePath', 'workspaceLabel', 'title', 'summary', 'details', 'done', 'createdAt', 'updatedAt',
+          'id', 'workspacePath', 'workspaceLabel', 'title', 'summary', 'details',
+          'done', 'confirmed', 'createdAt', 'updatedAt',
         ],
       },
     },
@@ -468,14 +486,14 @@ const TOOL_OUTPUT_SCHEMA = {
  * Render one snapshot for the model.
  * @param value - the validated canonical output.
  * @returns one text block listing every todo, newest-modified first, with its
- *   title, summary, details, id and modification time.
+ *   title, summary, details, id, modification time and confirmation state.
  */
 function renderSnapshot(value) {
   const open = value.items.filter(item => !item.done).length
   const head = `${value.items.length} todo(s), ${open} open — ${value.file}`
   if (value.items.length === 0) return [{ type: 'text', text: head }]
   const lines = value.items.map((item) => {
-    const line = `- [${item.done ? 'x' : ' '}] ${item.title} — ${item.workspaceLabel} (${item.workspacePath}) id=${item.id} updated=${item.updatedAt}`
+    const line = `- [${item.done ? 'x' : ' '}] ${item.title} — ${item.workspaceLabel} (${item.workspacePath}) id=${item.id} updated=${item.updatedAt} confirmed=${item.confirmed ? 'yes' : 'no'}`
     const summary = item.summary === '' ? '' : `\n  summary: ${item.summary}`
     const details = item.details === ''
       ? ''
@@ -543,9 +561,10 @@ export function apply(ctx) {
     name: TOOL_NAME,
     description: 'Read or change the shared workspace todo notebook that the user sees in the "跨工作区待办本" page. '
       + 'One notebook is shared by every workspace; each todo carries the workspace directory it belongs to, '
-      + 'a title, a short summary and Markdown details. The page is read-only: the agent owns every change. '
-      + 'Call list first to get ids, then add, update (title, summary, details, done, workspace or label), or remove. '
-      + 'Every result lists todos newest-modified first and carries each todo\'s updatedAt. '
+      + 'a title, a short summary and Markdown details. `done` is your completion flag and `confirmed` is the user’s acceptance, '
+      + 'which the board toggles with its Confirm control and which you may flip when the user asks you to. '
+      + 'Call list first to get ids, then add, update (title, summary, details, done, confirmed, workspace or label), or remove. '
+      + 'Every result lists todos newest-modified first and carries each todo\'s updatedAt and confirmed flag. '
       + 'Changes appear in the page within a few seconds and need no reload.',
     parameters: TOOL_PARAMETERS,
     output: {

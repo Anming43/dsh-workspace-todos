@@ -66,17 +66,21 @@ window.__ModuleLoader__.load({
       'panel.guide': 'The todos of this session’s workspace',
       'panel.noWorkspace': 'This session has no workspace yet.',
       'page.title': 'Workspace todos',
-      'page.subtitle': 'One notebook for every workspace, read-only here: each card belongs to a workspace, the agent writes its title, summary and details, and changes appear within a few seconds.',
+      'page.subtitle': 'One notebook for every workspace: the agent writes each card’s title, summary and details and marks its own work done; you confirm the cards you accept. Changes appear within a few seconds.',
       'page.back': 'Back to conversation',
       'page.loading': 'Reading workspaces…',
       'page.loadingBoard': 'Reading the notebook…',
       'page.empty': 'No todos yet. Ask the agent to add one with the workspace_todos tool.',
       'page.allDone': 'Nothing open. Completed cards wait in the area below.',
       'group.open': '{count} open',
-      'section.done': 'Completed · {count}',
-      'section.toggle': 'Show or hide completed todos',
-      'card.done': 'Done',
-      'card.open': 'Open',
+      'section.done': 'Confirmed · {count}',
+      'section.toggle': 'Show or hide confirmed todos',
+      'card.aiDone': 'AI finished',
+      'card.aiOpen': 'AI working',
+      'card.confirm': 'Confirm done',
+      'card.confirmed': 'Confirmed',
+      'card.pending': 'Pending',
+      'card.unconfirm': 'Undo confirmation',
       'card.updated': 'Updated {time}',
       'card.id': 'Todo id {id}',
       'card.idCopy': 'Copy todo id',
@@ -95,6 +99,7 @@ window.__ModuleLoader__.load({
         + '- Summary: {summary}\n'
         + '- Workspace: {workspace}\n'
         + '- Status: {status}\n'
+        + '- Confirmed by the user: {confirmed}\n'
         + '- Last modified: {time}\n\n'
         + 'Details:\n\n{details}\n\n'
         + 'When it is finished, close it with the workspace_todos tool: update with this id and done=true.',
@@ -104,6 +109,7 @@ window.__ModuleLoader__.load({
         + '- Summary: {summary}\n'
         + '- Workspace: {workspace}\n'
         + '- Status: {status}\n'
+        + '- Confirmed by the user: {confirmed}\n'
         + '- Last modified: {time}\n\n'
         + 'Details:\n\n{details}\n\n'
         + 'Say what it asks for, why it matters, which files or steps it touches, and what is unclear. '
@@ -112,7 +118,8 @@ window.__ModuleLoader__.load({
       'detail.close': 'Close',
       'detail.maximize': 'Maximize',
       'detail.restore': 'Restore size',
-      'detail.status': 'Status',
+      'detail.ai': 'AI status',
+      'detail.confirmation': 'My confirmation',
       'detail.workspace': 'Workspace',
       'detail.updated': 'Updated',
       'detail.created': 'Created',
@@ -125,17 +132,21 @@ window.__ModuleLoader__.load({
       'panel.guide': '当前会话所属工作区的待办',
       'panel.noWorkspace': '这个会话还没有所属工作区。',
       'page.title': '跨工作区待办本',
-      'page.subtitle': '所有工作区共用一份清单，这里只读：每张卡片属于一个工作区，标题、摘要和详情由智能体写入，改动几秒内出现在页面上。',
+      'page.subtitle': '所有工作区共用一份清单：标题、摘要、详情和 AI 完成状态由智能体写入，你在这里确认哪些真的完成；改动几秒内出现。',
       'page.back': '返回对话',
       'page.loading': '正在读取工作区…',
       'page.loadingBoard': '正在读取待办本…',
       'page.empty': '还没有待办。可以让智能体用 workspace_todos 工具添加。',
       'page.allDone': '没有未完成的待办，已完成的收纳在下方。',
       'group.open': '{count} 条未完成',
-      'section.done': '已完成 · {count}',
-      'section.toggle': '展开或收起已完成待办',
-      'card.done': '已完成',
-      'card.open': '未完成',
+      'section.done': '已确认 · {count}',
+      'section.toggle': '展开或收起已确认待办',
+      'card.aiDone': 'AI 已完成',
+      'card.aiOpen': 'AI 进行中',
+      'card.confirm': '确认完成',
+      'card.confirmed': '已确认',
+      'card.pending': '待确认',
+      'card.unconfirm': '撤销确认',
       'card.updated': '修改于 {time}',
       'card.id': '待办 ID {id}',
       'card.idCopy': '复制待办 ID',
@@ -154,6 +165,7 @@ window.__ModuleLoader__.load({
         + '- 摘要：{summary}\n'
         + '- 工作区：{workspace}\n'
         + '- 状态：{status}\n'
+        + '- 用户确认：{confirmed}\n'
         + '- 最后修改：{time}\n\n'
         + '详情：\n\n{details}\n\n'
         + '完成后用 workspace_todos 工具标记完成：update，带上这条 id 和 done=true。',
@@ -163,6 +175,7 @@ window.__ModuleLoader__.load({
         + '- 摘要：{summary}\n'
         + '- 工作区：{workspace}\n'
         + '- 状态：{status}\n'
+        + '- 用户确认：{confirmed}\n'
         + '- 最后修改：{time}\n\n'
         + '详情：\n\n{details}\n\n'
         + '说明它要做什么、为什么、涉及哪些文件或步骤、有哪些不确定点；除非我明确要求，否则保持未完成。',
@@ -170,7 +183,8 @@ window.__ModuleLoader__.load({
       'detail.close': '关闭',
       'detail.maximize': '最大化',
       'detail.restore': '还原大小',
-      'detail.status': '状态',
+      'detail.ai': 'AI 状态',
+      'detail.confirmation': '我的确认',
       'detail.workspace': '工作区',
       'detail.updated': '修改于',
       'detail.created': '创建于',
@@ -545,7 +559,8 @@ window.__ModuleLoader__.load({
         title: item.title,
         summary: item.summary === '' ? '—' : item.summary,
         workspace: item.workspacePath,
-        status: item.done ? t('card.done') : t('card.open'),
+        status: item.done ? t('card.aiDone') : t('card.aiOpen'),
+        confirmed: item.confirmed ? t('card.confirmed') : t('card.pending'),
         time: formatStamp(item.updatedAt),
         details: item.details === '' ? '—' : item.details,
       })
@@ -620,6 +635,7 @@ window.__ModuleLoader__.load({
         title: title.replace(/^#{1,6}\s+/, '').replace(/^[-*+]\s+/, '').replace(/^>\s?/, '').slice(0, 120),
         summary: typeof item.summary === 'string' ? item.summary : '',
         details: typeof item.details === 'string' ? item.details : text,
+        confirmed: item.confirmed === true,
       }
     }
 
@@ -682,7 +698,7 @@ window.__ModuleLoader__.load({
      * @returns the list element.
      */
     function TodoCardList(props) {
-      const { t, items, className, showWorkspace, onOpenDetail, onSend, canSend, onError } = props
+      const { t, items, className, showWorkspace, onOpenDetail, onSend, canSend, onError, onConfirm } = props
       return h('ul', { className },
         items.map(item => h(TodoCard, {
           key: item.id,
@@ -693,6 +709,7 @@ window.__ModuleLoader__.load({
           onSend,
           canSend,
           onError,
+          onConfirm,
         })))
     }
 
@@ -709,7 +726,7 @@ window.__ModuleLoader__.load({
      * @returns the section element, or null when no record is completed.
      */
     function CompletedSection(props) {
-      const { t, items, className, showWorkspace, onOpenDetail, onSend, canSend, onError } = props
+      const { t, items, className, showWorkspace, onOpenDetail, onSend, canSend, onError, onConfirm } = props
       const [open, setOpen] = React.useState(false)
       if (items.length === 0) return null
       return h('section', { className: 'dsh-todo-done' },
@@ -724,7 +741,7 @@ window.__ModuleLoader__.load({
         h('span', { className: 'dsh-todo-doneTitle' }, t('section.done', { count: items.length }))),
         open
           ? h(TodoCardList, {
-            t, items, className, showWorkspace, onOpenDetail, onSend, canSend, onError,
+            t, items, className, showWorkspace, onOpenDetail, onSend, canSend, onError, onConfirm,
           })
           : null)
     }
@@ -1004,7 +1021,7 @@ window.__ModuleLoader__.load({
      * @returns the list item element.
      */
     function TodoCard(props) {
-      const { t, item, showWorkspace, onOpenDetail, onSend, canSend, onError } = props
+      const { t, item, showWorkspace, onOpenDetail, onSend, canSend, onError, onConfirm } = props
       const [sendStates, setSendStates] = React.useState({ execute: 'idle', explain: 'idle' })
       const [copied, setCopied] = React.useState(false)
       const sendTimers = React.useRef({ execute: 0, explain: 0 })
@@ -1056,7 +1073,7 @@ window.__ModuleLoader__.load({
 
       return h('li', {
         className: 'dsh-todo-card',
-        'data-done': item.done ? 'true' : 'false',
+        'data-done': item.confirmed ? 'true' : 'false',
         role: 'button',
         tabIndex: 0,
         'aria-label': t('card.viewHint', { title: item.title }),
@@ -1074,7 +1091,17 @@ window.__ModuleLoader__.load({
         },
       },
       h('div', { className: 'dsh-todo-cardHead' },
-        h('span', { className: 'dsh-todo-status' }, item.done ? t('card.done') : t('card.open')),
+        h('span', {
+          className: 'dsh-todo-ai',
+          'data-done': item.done ? 'true' : 'false',
+        }, item.done ? t('card.aiDone') : t('card.aiOpen')),
+        h('button', {
+          type: 'button',
+          className: 'dsh-todo-confirm',
+          'aria-pressed': item.confirmed,
+          title: item.confirmed ? t('card.unconfirm') : t('card.confirm'),
+          onClick: (event) => { event.stopPropagation(); onConfirm(item) },
+        }, item.confirmed ? t('card.confirmed') : t('card.confirm')),
         h('div', { className: 'dsh-todo-cardActions' },
           sendControl('execute', ExecuteGlyph, t('execute.label')),
           sendControl('explain', ExplainGlyph, t('explain.label')))),
@@ -1185,8 +1212,11 @@ window.__ModuleLoader__.load({
 
       const meta = h('dl', { className: 'dsh-todo-detailMeta' },
         h('div', null,
-          h('dt', null, t('detail.status')),
-          h('dd', null, item.done ? t('card.done') : t('card.open'))),
+          h('dt', null, t('detail.ai')),
+          h('dd', null, item.done ? t('card.aiDone') : t('card.aiOpen'))),
+        h('div', null,
+          h('dt', null, t('detail.confirmation')),
+          h('dd', null, item.confirmed ? t('card.confirmed') : t('card.pending'))),
         h('div', null,
           h('dt', null, t('detail.workspace')),
           h('dd', { title: item.workspacePath }, item.workspaceLabel)),
@@ -1246,7 +1276,7 @@ window.__ModuleLoader__.load({
       const workspacesRef = React.useRef(workspaces)
       workspacesRef.current = workspaces
 
-      const { items, error, report, refresh } = useBoardItems(board)
+      const { items, error, adopt, report, refresh } = useBoardItems(board)
       const migrated = React.useRef(false)
       const [detailId, setDetailId] = React.useState(null)
 
@@ -1271,11 +1301,11 @@ window.__ModuleLoader__.load({
       }, [items, detailId])
 
       const openItems = React.useMemo(
-        () => (items === null ? [] : items.filter(item => !item.done)),
+        () => (items === null ? [] : items.filter(item => !item.confirmed)),
         [items],
       )
       const doneItems = React.useMemo(
-        () => (items === null ? [] : items.filter(item => item.done)),
+        () => (items === null ? [] : items.filter(item => item.confirmed)),
         [items],
       )
       const groups = React.useMemo(
@@ -1287,6 +1317,14 @@ window.__ModuleLoader__.load({
         : items.find(item => item.id === detailId)
 
       const openDetail = (item) => { setDetailId(item.id) }
+
+      const confirm = async (item) => {
+        try {
+          adopt(await board.update({ id: item.id, confirmed: !item.confirmed }))
+        } catch (cause) {
+          report(cause)
+        }
+      }
 
       const send = (item, kind) => {
         if (sessionId === undefined) return Promise.reject(new Error(t('send.disabled')))
@@ -1326,6 +1364,7 @@ window.__ModuleLoader__.load({
                           className: 'dsh-todo-cards',
                           onOpenDetail: openDetail,
                           onSend: send,
+                          onConfirm: confirm,
                           canSend: sessionId !== undefined,
                           onError: report,
                         })))),
@@ -1337,6 +1376,7 @@ window.__ModuleLoader__.load({
                     showWorkspace: true,
                     onOpenDetail: openDetail,
                     onSend: send,
+                    onConfirm: confirm,
                     canSend: sessionId !== undefined,
                     onError: report,
                   }),
@@ -1366,7 +1406,7 @@ window.__ModuleLoader__.load({
 
       const workspaces = useTodoWorkspaces(snapshot => snapshot.items)
       const ready = useTodoWorkspaces(snapshot => snapshot.phase === 'ready')
-      const { items, error, report } = useBoardItems(board)
+      const { items, error, adopt, report } = useBoardItems(board)
       const [detailId, setDetailId] = React.useState(null)
 
       const workspace = workspaces.find(candidate => (
@@ -1381,11 +1421,11 @@ window.__ModuleLoader__.load({
       ), [items, key])
 
       const openItems = React.useMemo(
-        () => visible.filter(item => !item.done),
+        () => visible.filter(item => !item.confirmed),
         [visible],
       )
       const doneItems = React.useMemo(
-        () => visible.filter(item => item.done),
+        () => visible.filter(item => item.confirmed),
         [visible],
       )
 
@@ -1399,6 +1439,14 @@ window.__ModuleLoader__.load({
         : items.find(item => item.id === detailId)
 
       const openDetail = (item) => { setDetailId(item.id) }
+
+      const confirm = async (item) => {
+        try {
+          adopt(await board.update({ id: item.id, confirmed: !item.confirmed }))
+        } catch (cause) {
+          report(cause)
+        }
+      }
 
       const send = (item, kind) => {
         if (sessionId === undefined) return Promise.reject(new Error(t('send.disabled')))
@@ -1434,6 +1482,7 @@ window.__ModuleLoader__.load({
                       className: 'dsh-todo-panelCards',
                       onOpenDetail: openDetail,
                       onSend: send,
+                      onConfirm: confirm,
                       canSend: sessionId !== undefined,
                       onError: report,
                     }),
@@ -1444,6 +1493,7 @@ window.__ModuleLoader__.load({
                     className: 'dsh-todo-panelCards',
                     onOpenDetail: openDetail,
                     onSend: send,
+                    onConfirm: confirm,
                     canSend: sessionId !== undefined,
                     onError: report,
                   }),
@@ -1677,10 +1727,40 @@ html[data-platform='darwin'] .dsh-todo-head {
   justify-content: space-between;
   gap: 8px;
 }
-.dsh-todo-status {
+.dsh-todo-ai {
+  flex: none;
   font-size: 12px;
   line-height: 18px;
   color: var(--dsw-alias-label-tertiary);
+}
+.dsh-todo-ai[data-done='true'] {
+  color: var(--dsw-alias-state-business-primary);
+}
+.dsh-todo-confirm {
+  flex: none;
+  height: 22px;
+  padding: 0 8px;
+  font: inherit;
+  font-size: 12px;
+  line-height: 16px;
+  color: var(--dsw-alias-label-secondary);
+  background: transparent;
+  border: 0.5px solid var(--dsw-alias-border-l3);
+  border-radius: var(--dsw-radius-sm);
+  cursor: pointer;
+}
+.dsh-todo-confirm[aria-pressed='true'] {
+  color: var(--dsw-alias-label-primary);
+  background: var(--dsw-alias-bg-base);
+}
+.dsh-todo-confirm:focus-visible {
+  outline: var(--dsw-focus-ring-width) solid var(--dsw-focus-ring-color, var(--dsw-alias-state-business-primary));
+  outline-offset: 1px;
+}
+@media (hover: hover) {
+  .dsh-todo-confirm:hover {
+    background: var(--dsw-alias-interactive-bg-hover);
+  }
 }
 .dsh-todo-cardTitle {
   font-size: 14px;
@@ -1708,6 +1788,7 @@ html[data-platform='darwin'] .dsh-todo-head {
   flex: none;
   display: inline-flex;
   gap: 2px;
+  margin-left: auto;
   opacity: 0;
   transition: opacity 120ms ease;
 }

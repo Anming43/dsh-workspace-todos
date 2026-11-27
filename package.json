@@ -1,6 +1,6 @@
 {
   "name": "dsh-workspace-todos",
-  "version": "2.0.0",
+  "version": "2.2.0",
   "private": true,
   "description": "A read-only todo board shared by every workspace in DeepSeek Harness: cards grouped by workspace with a title, summary and Markdown details, and a workspace_todos tool the agent uses on the same file.",
   "license": "MIT",
