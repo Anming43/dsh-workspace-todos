@@ -63,11 +63,39 @@ function pathKey(value) {
 }
 
 /**
+ * Derive a title for a record written before titles existed.
+ *
+ * The first non-empty line is the title, with a leading heading, bullet or
+ * quote marker removed; longer lines are cut at 120 characters. A record with
+ * no text keeps an empty title and is refused, because a card with no title
+ * cannot be presented.
+ *
+ * @param source - the legacy `text` body, when the record has one.
+ * @returns the derived title, possibly empty.
+ */
+function deriveTitle(source) {
+  if (typeof source !== 'string') return ''
+  const line = source.split(/\r?\n/).map(part => part.trim()).find(part => part !== '')
+  if (line === undefined) return ''
+  const stripped = line
+    .replace(/^#{1,6}\s+/, '')
+    .replace(/^[-*+]\s+/, '')
+    .replace(/^>\s?/, '')
+    .trim()
+  return stripped.length > 120 ? `${stripped.slice(0, 119)}…` : stripped
+}
+
+/**
  * Read and validate one stored record.
  *
- * `updatedAt` was added after the first release, so a record written by 1.0.0
- * has only `createdAt`: that value stands in for the modification time until
- * the record is written again, and every write from then on stores both.
+ * Two fields arrived after the first release, so older files are read
+ * leniently rather than refused:
+ *
+ * - `updatedAt` (1.1.0): a record without it uses `createdAt` as its
+ *   modification time until the next write stores both.
+ * - `title`/`summary`/`details` (2.0.0): a record written before the split has
+ *   one `text` body, which becomes `details`; its title is derived from the
+ *   first line and its summary starts empty. Every write stores the split.
  *
  * @param value - one raw element of the stored `items` array.
  * @param index - its position, used in failure messages.
@@ -78,7 +106,7 @@ function normalizeItem(value, index) {
   if (typeof value !== 'object' || value === null || Array.isArray(value)) {
     throw new Error(`todo board: ${DATA_FILE} item #${index} is not an object`)
   }
-  const { id, workspacePath, workspaceLabel, text, done, createdAt, updatedAt } = value
+  const { id, workspacePath, workspaceLabel, title, summary, details, text, done, createdAt, updatedAt } = value
   if (typeof id !== 'string' || id === '') {
     throw new Error(`todo board: ${DATA_FILE} item #${index} has no id`)
   }
@@ -88,8 +116,25 @@ function normalizeItem(value, index) {
   if (typeof workspaceLabel !== 'string' || workspaceLabel.trim() === '') {
     throw new Error(`todo board: item "${id}" has no workspace label`)
   }
-  if (typeof text !== 'string' || text.trim() === '') {
-    throw new Error(`todo board: item "${id}" has no text`)
+  if (title !== undefined && typeof title !== 'string') {
+    throw new Error(`todo board: item "${id}" has an invalid title`)
+  }
+  if (summary !== undefined && typeof summary !== 'string') {
+    throw new Error(`todo board: item "${id}" has an invalid summary`)
+  }
+  if (details !== undefined && typeof details !== 'string') {
+    throw new Error(`todo board: item "${id}" has invalid details`)
+  }
+  if (text !== undefined && typeof text !== 'string') {
+    throw new Error(`todo board: item "${id}" has invalid text`)
+  }
+  const legacyText = typeof text === 'string' ? text : ''
+  const resolvedDetails = typeof details === 'string' ? details : legacyText
+  const resolvedTitle = typeof title === 'string' && title.trim() !== ''
+    ? title.trim()
+    : deriveTitle(resolvedDetails)
+  if (resolvedTitle === '') {
+    throw new Error(`todo board: item "${id}" has no title`)
   }
   if (typeof done !== 'boolean') {
     throw new Error(`todo board: item "${id}" has no completion flag`)
@@ -105,7 +150,9 @@ function normalizeItem(value, index) {
     id,
     workspacePath: workspacePath.trim(),
     workspaceLabel: workspaceLabel.trim(),
-    text: text.trim(),
+    title: resolvedTitle,
+    summary: typeof summary === 'string' ? summary.trim() : '',
+    details: resolvedDetails,
     done,
     createdAt,
     updatedAt: typeof updatedAt === 'string' && updatedAt !== '' ? updatedAt : createdAt,
@@ -270,7 +317,9 @@ async function dispatch(payload) {
   }
 
   if (action === 'add') {
-    const text = requireText(input.text, 'text')
+    const title = requireText(input.title, 'title')
+    const summary = optionalText(input.summary, 'summary') ?? ''
+    const details = optionalText(input.details, 'details') ?? ''
     const workspacePath = requireText(input.workspace, 'workspace')
     const label = optionalText(input.label, 'label') ?? basename(workspacePath)
     return serialized(async () => {
@@ -280,7 +329,9 @@ async function dispatch(payload) {
         id: randomUUID(),
         workspacePath,
         workspaceLabel: label,
-        text,
+        title,
+        summary,
+        details,
         done: false,
         createdAt: now,
         updatedAt: now,
@@ -292,20 +343,26 @@ async function dispatch(payload) {
 
   if (action === 'update') {
     const id = requireText(input.id, 'id')
-    const text = optionalText(input.text, 'text')
+    const title = optionalText(input.title, 'title')
+    // An empty string clears these two; omitting them leaves them alone.
+    const summary = input.summary === undefined ? undefined : (optionalText(input.summary, 'summary') ?? '')
+    const details = input.details === undefined ? undefined : (optionalText(input.details, 'details') ?? '')
     const workspacePath = optionalText(input.workspace, 'workspace')
     const label = optionalText(input.label, 'label')
     if (input.done !== undefined && typeof input.done !== 'boolean') {
       throw new Error('todo board: "done" must be a boolean')
     }
-    if (text === undefined && workspacePath === undefined && label === undefined && input.done === undefined) {
-      throw new Error('todo board: "update" needs at least one of text, done, workspace, label')
+    if (title === undefined && summary === undefined && details === undefined
+      && workspacePath === undefined && label === undefined && input.done === undefined) {
+      throw new Error('todo board: "update" needs at least one of title, summary, details, done, workspace, label')
     }
     return serialized(async () => {
       const records = await readStore()
       const item = records.find(candidate => candidate.id === id)
       if (item === undefined) throw new Error(`todo board: no todo with id "${id}"`)
-      if (text !== undefined) item.text = text
+      if (title !== undefined) item.title = title
+      if (summary !== undefined) item.summary = summary
+      if (details !== undefined) item.details = details
       if (input.done !== undefined) item.done = input.done
       if (workspacePath !== undefined) {
         item.workspacePath = workspacePath
@@ -342,7 +399,7 @@ const TOOL_PARAMETERS = {
     action: {
       type: 'string',
       enum: ['list', 'add', 'update', 'remove'],
-      description: 'list reads the notebook; add appends one todo; update changes text or completion; remove deletes one todo.',
+      description: 'list reads the notebook; add appends one todo; update changes its title, summary, details or completion; remove deletes one todo.',
     },
     workspace: {
       type: 'string',
@@ -352,9 +409,17 @@ const TOOL_PARAMETERS = {
       type: 'string',
       description: 'Optional display name for the workspace when adding or moving a todo; defaults to the directory name.',
     },
-    text: {
+    title: {
       type: 'string',
-      description: 'The todo text. Required by add; the replacement text when updating.',
+      description: 'The one-line title shown on the card. Required by add; replacing it updates the card heading.',
+    },
+    summary: {
+      type: 'string',
+      description: 'One or two plain-text sentences shown under the title. Optional; an empty string clears it.',
+    },
+    details: {
+      type: 'string',
+      description: 'The Markdown body shown in the card’s detail dialog. Optional; an empty string clears it.',
     },
     done: {
       type: 'boolean',
@@ -383,12 +448,16 @@ const TOOL_OUTPUT_SCHEMA = {
           id: { type: 'string' },
           workspacePath: { type: 'string' },
           workspaceLabel: { type: 'string' },
-          text: { type: 'string' },
+          title: { type: 'string' },
+          summary: { type: 'string' },
+          details: { type: 'string' },
           done: { type: 'boolean' },
           createdAt: { type: 'string' },
           updatedAt: { type: 'string' },
         },
-        required: ['id', 'workspacePath', 'workspaceLabel', 'text', 'done', 'createdAt', 'updatedAt'],
+        required: [
+          'id', 'workspacePath', 'workspaceLabel', 'title', 'summary', 'details', 'done', 'createdAt', 'updatedAt',
+        ],
       },
     },
   },
@@ -399,15 +468,20 @@ const TOOL_OUTPUT_SCHEMA = {
  * Render one snapshot for the model.
  * @param value - the validated canonical output.
  * @returns one text block listing every todo, newest-modified first, with its
- *   id and modification time.
+ *   title, summary, details, id and modification time.
  */
 function renderSnapshot(value) {
   const open = value.items.filter(item => !item.done).length
   const head = `${value.items.length} todo(s), ${open} open — ${value.file}`
   if (value.items.length === 0) return [{ type: 'text', text: head }]
-  const lines = value.items.map(item => (
-    `- [${item.done ? 'x' : ' '}] ${item.text} — ${item.workspaceLabel} (${item.workspacePath}) id=${item.id} updated=${item.updatedAt}`
-  ))
+  const lines = value.items.map((item) => {
+    const line = `- [${item.done ? 'x' : ' '}] ${item.title} — ${item.workspaceLabel} (${item.workspacePath}) id=${item.id} updated=${item.updatedAt}`
+    const summary = item.summary === '' ? '' : `\n  summary: ${item.summary}`
+    const details = item.details === ''
+      ? ''
+      : `\n${item.details.split('\n').map(part => `  ${part}`).join('\n')}`
+    return `${line}${summary}${details}`
+  })
   return [{ type: 'text', text: `${head}\n${lines.join('\n')}` }]
 }
 
@@ -468,8 +542,9 @@ export function apply(ctx) {
   ctx.tools.register({
     name: TOOL_NAME,
     description: 'Read or change the shared workspace todo notebook that the user sees in the "跨工作区待办本" page. '
-      + 'One notebook is shared by every workspace; each todo carries the workspace directory it belongs to. '
-      + 'Call list first to get ids, then add, update (text or done), or remove. '
+      + 'One notebook is shared by every workspace; each todo carries the workspace directory it belongs to, '
+      + 'a title, a short summary and Markdown details. The page is read-only: the agent owns every change. '
+      + 'Call list first to get ids, then add, update (title, summary, details, done, workspace or label), or remove. '
       + 'Every result lists todos newest-modified first and carries each todo\'s updatedAt. '
       + 'Changes appear in the page within a few seconds and need no reload.',
     parameters: TOOL_PARAMETERS,

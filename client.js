@@ -65,59 +65,58 @@ window.__ModuleLoader__.load({
       'panel': 'Workspace todos',
       'panel.guide': 'The todos of this session’s workspace',
       'panel.noWorkspace': 'This session has no workspace yet.',
-      'panel.addPlaceholder': 'Add a card for this workspace — Markdown works',
       'page.title': 'Workspace todos',
-      'page.subtitle': 'One notebook for every workspace. Each card belongs to a workspace and its text is Markdown; an agent in any workspace reads and writes the same file.',
+      'page.subtitle': 'One notebook for every workspace, read-only here: each card belongs to a workspace, the agent writes its title, summary and details, and changes appear within a few seconds.',
       'page.back': 'Back to conversation',
       'page.loading': 'Reading workspaces…',
       'page.loadingBoard': 'Reading the notebook…',
-      'page.empty': 'Nothing here yet. Add the first card above.',
-      'add.placeholder': 'What needs doing? Markdown works — **bold**, `code`, - lists, [link](url)',
-      'add.workspace': 'Workspace',
-      'add.submit': 'Add',
-      'add.hint': 'Ctrl+Enter adds',
-      'add.noWorkspace': 'No workspace yet',
-      'group.open': '{count} open',
+      'page.empty': 'No todos yet. Ask the agent to add one with the workspace_todos tool.',
       'page.allDone': 'Nothing open. Completed cards wait in the area below.',
+      'group.open': '{count} open',
       'section.done': 'Completed · {count}',
       'section.toggle': 'Show or hide completed todos',
+      'card.done': 'Done',
+      'card.open': 'Open',
       'card.updated': 'Updated {time}',
       'card.id': 'Todo id {id}',
+      'card.idCopy': 'Copy todo id',
+      'card.idCopied': 'Copied',
+      'card.viewHint': 'Open “{title}”',
       'execute.label': 'Execute todo',
       'explain.label': 'Explain todo',
-      'execute.aria': 'Execute “{text}”',
-      'explain.aria': 'Explain “{text}”',
+      'execute.aria': 'Execute “{title}”',
+      'explain.aria': 'Explain “{title}”',
       'execute.sent': 'Execution requested',
       'explain.sent': 'Explanation requested',
       'send.disabled': 'Open a conversation first',
       'execute.prompt': 'Execute this todo from the shared workspace todo notebook.\n\n'
         + '- Todo: {short} (`{id}`)\n'
+        + '- Title: {title}\n'
+        + '- Summary: {summary}\n'
         + '- Workspace: {workspace}\n'
         + '- Status: {status}\n'
         + '- Last modified: {time}\n\n'
-        + '---\n\n{text}\n\n'
+        + 'Details:\n\n{details}\n\n'
         + 'When it is finished, close it with the workspace_todos tool: update with this id and done=true.',
       'explain.prompt': 'Explain this todo from the shared workspace todo notebook; do not change anything yet.\n\n'
         + '- Todo: {short} (`{id}`)\n'
+        + '- Title: {title}\n'
+        + '- Summary: {summary}\n'
         + '- Workspace: {workspace}\n'
         + '- Status: {status}\n'
         + '- Last modified: {time}\n\n'
-        + '---\n\n{text}\n\n'
+        + 'Details:\n\n{details}\n\n'
         + 'Say what it asks for, why it matters, which files or steps it touches, and what is unclear. '
         + 'Leave the todo open unless I ask you to do it.',
-      'card.done': 'Done',
-      'card.open': 'Open',
-      'row.toggle': 'Toggle “{text}”',
-      'row.edit': 'Edit “{text}”',
-      'row.delete': 'Delete “{text}”',
-      'edit.title': 'Edit todo',
-      'edit.maximize': 'Maximize',
-      'edit.restore': 'Restore size',
-      'edit.close': 'Close editor',
-      'edit.label': 'Todo text (Markdown)',
-      'edit.save': 'Save',
-      'edit.cancel': 'Cancel',
-      'edit.hint': 'Ctrl+Enter saves, Esc cancels',
+      'detail.title': 'Todo details',
+      'detail.close': 'Close',
+      'detail.maximize': 'Maximize',
+      'detail.restore': 'Restore size',
+      'detail.status': 'Status',
+      'detail.workspace': 'Workspace',
+      'detail.updated': 'Updated',
+      'detail.created': 'Created',
+      'detail.noDetails': 'No details yet.',
     }
 
     /** Chinese copy. */
@@ -125,58 +124,57 @@ window.__ModuleLoader__.load({
       'panel': '跨工作区待办本',
       'panel.guide': '当前会话所属工作区的待办',
       'panel.noWorkspace': '这个会话还没有所属工作区。',
-      'panel.addPlaceholder': '给这个工作区加一条，支持 Markdown',
       'page.title': '跨工作区待办本',
-      'page.subtitle': '所有工作区共用一份清单。每张卡片属于一个工作区，内容支持基础 Markdown；任意工作区的智能体读写的都是同一个文件。',
+      'page.subtitle': '所有工作区共用一份清单，这里只读：每张卡片属于一个工作区，标题、摘要和详情由智能体写入，改动几秒内出现在页面上。',
       'page.back': '返回对话',
       'page.loading': '正在读取工作区…',
       'page.loadingBoard': '正在读取待办本…',
-      'page.empty': '还没有待办，在上方添加第一张卡片。',
-      'add.placeholder': '要做什么？支持 Markdown：**粗体**、`代码`、- 列表、[链接](url)',
-      'add.workspace': '所属工作区',
-      'add.submit': '添加',
-      'add.hint': 'Ctrl+Enter 添加',
-      'add.noWorkspace': '暂无工作区',
-      'group.open': '{count} 条未完成',
+      'page.empty': '还没有待办。可以让智能体用 workspace_todos 工具添加。',
       'page.allDone': '没有未完成的待办，已完成的收纳在下方。',
+      'group.open': '{count} 条未完成',
       'section.done': '已完成 · {count}',
       'section.toggle': '展开或收起已完成待办',
+      'card.done': '已完成',
+      'card.open': '未完成',
       'card.updated': '修改于 {time}',
       'card.id': '待办 ID {id}',
+      'card.idCopy': '复制待办 ID',
+      'card.idCopied': '已复制',
+      'card.viewHint': '查看「{title}」',
       'execute.label': '执行待办',
       'explain.label': '解释待办',
-      'execute.aria': '执行待办「{text}」',
-      'explain.aria': '解释待办「{text}」',
+      'execute.aria': '执行待办「{title}」',
+      'explain.aria': '解释待办「{title}」',
       'execute.sent': '已发送执行请求',
       'explain.sent': '已发送解释请求',
       'send.disabled': '先打开一个会话',
       'execute.prompt': '执行这条待办（来自跨工作区待办本）：\n\n'
         + '- 待办：{short}（`{id}`）\n'
+        + '- 标题：{title}\n'
+        + '- 摘要：{summary}\n'
         + '- 工作区：{workspace}\n'
         + '- 状态：{status}\n'
         + '- 最后修改：{time}\n\n'
-        + '---\n\n{text}\n\n'
+        + '详情：\n\n{details}\n\n'
         + '完成后用 workspace_todos 工具标记完成：update，带上这条 id 和 done=true。',
       'explain.prompt': '解释这条待办（来自跨工作区待办本），先不要动手改动：\n\n'
         + '- 待办：{short}（`{id}`）\n'
+        + '- 标题：{title}\n'
+        + '- 摘要：{summary}\n'
         + '- 工作区：{workspace}\n'
         + '- 状态：{status}\n'
         + '- 最后修改：{time}\n\n'
-        + '---\n\n{text}\n\n'
+        + '详情：\n\n{details}\n\n'
         + '说明它要做什么、为什么、涉及哪些文件或步骤、有哪些不确定点；除非我明确要求，否则保持未完成。',
-      'card.done': '已完成',
-      'card.open': '未完成',
-      'row.toggle': '切换「{text}」的完成状态',
-      'row.edit': '编辑「{text}」',
-      'row.delete': '删除「{text}」',
-      'edit.title': '编辑待办',
-      'edit.maximize': '最大化',
-      'edit.restore': '还原大小',
-      'edit.close': '关闭编辑器',
-      'edit.label': '待办内容（Markdown）',
-      'edit.save': '保存',
-      'edit.cancel': '取消',
-      'edit.hint': 'Ctrl+Enter 保存，Esc 取消',
+      'detail.title': '待办详情',
+      'detail.close': '关闭',
+      'detail.maximize': '最大化',
+      'detail.restore': '还原大小',
+      'detail.status': '状态',
+      'detail.workspace': '工作区',
+      'detail.updated': '修改于',
+      'detail.created': '创建于',
+      'detail.noDetails': '还没有详情。',
     }
 
     // --------------------------------------------------------------- Host RPC
@@ -259,6 +257,9 @@ window.__ModuleLoader__.load({
             : 'unknown workspace')
           : live.path
         const added = await board.add({
+          title: entry.text.split(/\r?\n/)[0].trim().slice(0, 120) || entry.text.slice(0, 120),
+          details: entry.text,
+          // A Host half that predates the split still reads `text`.
           text: entry.text,
           workspace: workspacePath,
           label: typeof entry.workspaceLabel === 'string' ? entry.workspaceLabel : undefined,
@@ -541,10 +542,12 @@ window.__ModuleLoader__.load({
       return t(kind === 'explain' ? 'explain.prompt' : 'execute.prompt', {
         short: shortId(item),
         id: item.id,
+        title: item.title,
+        summary: item.summary === '' ? '—' : item.summary,
         workspace: item.workspacePath,
         status: item.done ? t('card.done') : t('card.open'),
         time: formatStamp(item.updatedAt),
-        text: item.text,
+        details: item.details === '' ? '—' : item.details,
       })
     }
 
@@ -597,6 +600,30 @@ window.__ModuleLoader__.load({
     // ------------------------------------------------------- shared state
 
     /**
+     * Give one Host record the three split fields, whatever the Host half
+     * answered.
+     *
+     * Within one release the Host and this page always agree, but a page that
+     * hot-reloaded before the Host did would otherwise render blank cards: a
+     * record from the pre-2.0 shape has one `text` body, which becomes the
+     * details with a title derived from its first line.
+     *
+     * @param item - one record from a Host snapshot.
+     * @returns the record with `title`, `summary` and `details`.
+     */
+    function withSplitFields(item) {
+      const text = typeof item.text === 'string' ? item.text : ''
+      const derived = text.split(/\r?\n/).map(part => part.trim()).find(part => part !== '') ?? ''
+      const title = typeof item.title === 'string' && item.title !== '' ? item.title : derived
+      return {
+        ...item,
+        title: title.replace(/^#{1,6}\s+/, '').replace(/^[-*+]\s+/, '').replace(/^>\s?/, '').slice(0, 120),
+        summary: typeof item.summary === 'string' ? item.summary : '',
+        details: typeof item.details === 'string' ? item.details : text,
+      }
+    }
+
+    /**
      * Read the notebook from the Host and re-read it while mounted, so a change
      * the agent made appears without a reload.
      *
@@ -609,7 +636,7 @@ window.__ModuleLoader__.load({
       const [error, setError] = React.useState(null)
 
       const adopt = React.useCallback((value) => {
-        setItems(value.items)
+        setItems(value.items.map(withSplitFields))
         setError(null)
       }, [])
       const report = React.useCallback((cause) => {
@@ -649,77 +676,23 @@ window.__ModuleLoader__.load({
     }
 
     /**
-     * The per-card editing and mutation operations both surfaces share.
-     * @param props - `board`, the current records, and the adopt/report callbacks.
-     * @returns the editing state, its setter, and the operations a card calls.
-     */
-    function useTodoEditing(props) {
-      const { board, items, adopt, report } = props
-      const [editingId, setEditingId] = React.useState(null)
-      const [editingText, setEditingText] = React.useState('')
-
-      const start = (item) => {
-        setEditingId(item.id)
-        setEditingText(item.text)
-      }
-      const cancel = () => {
-        setEditingId(null)
-        setEditingText('')
-      }
-
-      const toggle = async (id) => {
-        const item = (items ?? []).find(candidate => candidate.id === id)
-        if (item === undefined) return
-        try {
-          adopt(await board.update({ id, done: !item.done }))
-        } catch (cause) {
-          report(cause)
-        }
-      }
-
-      const remove = async (id) => {
-        try {
-          adopt(await board.remove(id))
-          if (editingId === id) cancel()
-        } catch (cause) {
-          report(cause)
-        }
-      }
-
-      const save = async () => {
-        const text = editingText.trim()
-        if (text === '' || editingId === null) return
-        try {
-          adopt(await board.update({ id: editingId, text }))
-          cancel()
-        } catch (cause) {
-          report(cause)
-        }
-      }
-
-      return { editingId, editingText, setEditingText, start, cancel, save, toggle, remove }
-    }
-
-    /**
-     * One card per record, wired to an editor.
-     * @param props - `t`, the records, the editor, the list's class name, and
-     *   whether each card names its workspace.
+     * One card per record, wired to the card's controls.
+     * @param props - `t`, the records, the list's class name, whether each card
+     *   names its workspace, the detail opener, and the send wiring.
      * @returns the list element.
      */
     function TodoCardList(props) {
-      const { t, items, editor, className, showWorkspace, onSend, canSend, onSendError } = props
+      const { t, items, className, showWorkspace, onOpenDetail, onSend, canSend, onError } = props
       return h('ul', { className },
         items.map(item => h(TodoCard, {
           key: item.id,
           t,
           item,
-          onStartEdit: editor.start,
-          onToggle: editor.toggle,
-          onDelete: editor.remove,
           showWorkspace,
+          onOpenDetail,
           onSend,
           canSend,
-          onSendError,
+          onError,
         })))
     }
 
@@ -730,12 +703,13 @@ window.__ModuleLoader__.load({
      * header is a button that shows or hides the cards underneath. With no
      * completed record the section renders nothing at all.
      *
-     * @param props - `t`, the completed records, the shared editor, the list's
-     *   class name, and whether each card names its workspace.
+     * @param props - `t`, the completed records, the list's class name,
+     *   whether each card names its workspace, the detail opener, and the send
+     *   wiring.
      * @returns the section element, or null when no record is completed.
      */
     function CompletedSection(props) {
-      const { t, items, editor, className, showWorkspace, onSend, canSend, onSendError } = props
+      const { t, items, className, showWorkspace, onOpenDetail, onSend, canSend, onError } = props
       const [open, setOpen] = React.useState(false)
       if (items.length === 0) return null
       return h('section', { className: 'dsh-todo-done' },
@@ -749,7 +723,9 @@ window.__ModuleLoader__.load({
         h(ChevronGlyph, { open }),
         h('span', { className: 'dsh-todo-doneTitle' }, t('section.done', { count: items.length }))),
         open
-          ? h(TodoCardList, { t, items, editor, className, showWorkspace, onSend, canSend, onSendError })
+          ? h(TodoCardList, {
+            t, items, className, showWorkspace, onOpenDetail, onSend, canSend, onError,
+          })
           : null)
     }
 
@@ -774,47 +750,6 @@ window.__ModuleLoader__.load({
         fill: 'none',
         stroke: 'currentColor',
         strokeWidth: 1.4,
-        strokeLinecap: 'round',
-        strokeLinejoin: 'round',
-      }))
-    }
-
-    /**
-     * Inline pencil glyph for a card's edit control.
-     * @returns the icon element, in the current text colour.
-     */
-    function PencilGlyph() {
-      return h('svg', {
-        viewBox: '0 0 16 16',
-        width: 14,
-        height: 14,
-        'aria-hidden': true,
-        focusable: 'false',
-      }, h('path', {
-        d: 'M11.1 2.6a1.5 1.5 0 0 1 2.1 2.1L5.9 12 3 12.9l.9-2.9 7.2-7.4Z',
-        fill: 'none',
-        stroke: 'currentColor',
-        strokeWidth: 1.3,
-        strokeLinejoin: 'round',
-      }))
-    }
-
-    /**
-     * Inline bin glyph for a card's delete control.
-     * @returns the icon element, in the current text colour.
-     */
-    function TrashGlyph() {
-      return h('svg', {
-        viewBox: '0 0 16 16',
-        width: 14,
-        height: 14,
-        'aria-hidden': true,
-        focusable: 'false',
-      }, h('path', {
-        d: 'M3 4.4h10M6.4 4.4V2.9h3.2v1.5M4.6 4.4l.6 8.1a1 1 0 0 0 1 .9h3.6a1 1 0 0 0 1-.9l.6-8.1',
-        fill: 'none',
-        stroke: 'currentColor',
-        strokeWidth: 1.3,
         strokeLinecap: 'round',
         strokeLinejoin: 'round',
       }))
@@ -877,7 +812,7 @@ window.__ModuleLoader__.load({
     }
 
     /**
-     * Inline maximize glyph for the editor's header.
+     * Inline maximize glyph for the detail dialog's header.
      * @returns the icon element, in the current text colour.
      */
     function MaximizeGlyph() {
@@ -898,7 +833,7 @@ window.__ModuleLoader__.load({
     }
 
     /**
-     * Inline restore glyph for the maximized editor's header.
+     * Inline restore glyph for the maximized detail dialog's header.
      * @returns the icon element, in the current text colour.
      */
     function RestoreGlyph() {
@@ -930,7 +865,7 @@ window.__ModuleLoader__.load({
     }
 
     /**
-     * Inline close glyph for the editor's header.
+     * Inline close glyph for the detail dialog's header.
      * @returns the icon element, in the current text colour.
      */
     function CloseGlyph() {
@@ -946,6 +881,40 @@ window.__ModuleLoader__.load({
         stroke: 'currentColor',
         strokeWidth: 1.3,
         strokeLinecap: 'round',
+      }))
+    }
+
+    /**
+     * Inline copy glyph for the id badge's copy control.
+     * @returns the icon element, in the current text colour.
+     */
+    function CopyGlyph() {
+      return h('svg', {
+        viewBox: '0 0 16 16',
+        width: 12,
+        height: 12,
+        'aria-hidden': true,
+        focusable: 'false',
+      },
+      h('rect', {
+        x: 2.4,
+        y: 2.4,
+        width: 8,
+        height: 8,
+        rx: 1.4,
+        fill: 'none',
+        stroke: 'currentColor',
+        strokeWidth: 1.3,
+      }),
+      h('rect', {
+        x: 5.6,
+        y: 5.6,
+        width: 8,
+        height: 8,
+        rx: 1.4,
+        fill: 'none',
+        stroke: 'currentColor',
+        strokeWidth: 1.3,
       }))
     }
 
@@ -1023,28 +992,28 @@ window.__ModuleLoader__.load({
     }
 
     /**
-     * One todo card: a head with the completion control, the execute and
-     * explain controls and the other actions, the Markdown body, then a meta
-     * line with the short id and the modification time. Editing happens in
-     * {@link TodoEditorDialog}, not inside the card.
+     * One todo card: a head with the status and the two conversation controls,
+     * the title, the summary, then a meta line with the short id, a copy control
+     * and the modification time. The whole card opens the read-only detail
+     * dialog, and the controls stop their click from reaching it. The card body
+     * is the title and summary only — the details live in
+     * {@link TodoDetailDialog}.
      *
-     * @param props - the translated strings, the item, its callbacks, whether
-     *   the card names its workspace, and whether it can send itself into a
-     *   conversation.
+     * @param props - the translated strings, the item, whether the card names
+     *   its workspace, the detail opener, and the send wiring.
      * @returns the list item element.
      */
     function TodoCard(props) {
-      const {
-        t, item, onStartEdit, onToggle, onDelete,
-        showWorkspace, onSend, canSend, onSendError,
-      } = props
+      const { t, item, showWorkspace, onOpenDetail, onSend, canSend, onError } = props
       const [sendStates, setSendStates] = React.useState({ execute: 'idle', explain: 'idle' })
+      const [copied, setCopied] = React.useState(false)
       const sendTimers = React.useRef({ execute: 0, explain: 0 })
+      const copyTimer = React.useRef(0)
       React.useEffect(() => () => {
         window.clearTimeout(sendTimers.current.execute)
         window.clearTimeout(sendTimers.current.explain)
+        window.clearTimeout(copyTimer.current)
       }, [])
-      const blocks = React.useMemo(() => parseBlocks(item.text), [item.text])
 
       const triggerSend = async (kind) => {
         if (canSend !== true || sendStates[kind] === 'sending') return
@@ -1058,7 +1027,19 @@ window.__ModuleLoader__.load({
           }, 4000)
         } catch (cause) {
           setSendStates(value => ({ ...value, [kind]: 'idle' }))
-          onSendError(cause)
+          onError(cause)
+        }
+      }
+
+      const copyId = async (event) => {
+        event.stopPropagation()
+        try {
+          await navigator.clipboard.writeText(item.id)
+          setCopied(true)
+          window.clearTimeout(copyTimer.current)
+          copyTimer.current = window.setTimeout(() => { setCopied(false) }, 1500)
+        } catch (cause) {
+          onError(cause)
         }
       }
 
@@ -1066,78 +1047,85 @@ window.__ModuleLoader__.load({
         type: 'button',
         className: 'dsh-todo-iconButton',
         disabled: canSend !== true || sendStates[kind] === 'sending',
-        'aria-label': canSend === true ? t(`${kind}.aria`, { text: item.text }) : t('send.disabled'),
+        'aria-label': canSend === true ? t(`${kind}.aria`, { title: item.title }) : t('send.disabled'),
         title: canSend === true
           ? (sendStates[kind] === 'sent' ? t(`${kind}.sent`) : label)
           : t('send.disabled'),
-        onClick: () => { void triggerSend(kind) },
+        onClick: (event) => { event.stopPropagation(); void triggerSend(kind) },
       }, sendStates[kind] === 'sent' ? h(CheckGlyph) : h(Glyph))
 
-      return h('li', { className: 'dsh-todo-card', 'data-done': item.done ? 'true' : 'false' },
-        h('div', { className: 'dsh-todo-cardHead' },
-          h('label', { className: 'dsh-todo-checkWrap' },
-            h('input', {
-              type: 'checkbox',
-              className: 'dsh-todo-check',
-              checked: item.done,
-              'aria-label': t('row.toggle', { text: item.text }),
-              onChange: () => { onToggle(item.id) },
-            }),
-            h('span', { className: 'dsh-todo-status' }, item.done ? t('card.done') : t('card.open'))),
-          h('div', { className: 'dsh-todo-cardActions' },
-            sendControl('execute', ExecuteGlyph, t('execute.label')),
-            sendControl('explain', ExplainGlyph, t('explain.label')),
-            h('button', {
-              type: 'button',
-              className: 'dsh-todo-iconButton',
-              'aria-label': t('row.edit', { text: item.text }),
-              onClick: () => { onStartEdit(item) },
-            }, h(PencilGlyph)),
-            h('button', {
-              type: 'button',
-              className: 'dsh-todo-iconButton',
-              'data-variant': 'danger',
-              'aria-label': t('row.delete', { text: item.text }),
-              onClick: () => { onDelete(item.id) },
-            }, h(TrashGlyph)))),
-        h('div', { className: 'dsh-todo-md' }, renderMarkdown(blocks)),
-        h('div', { className: 'dsh-todo-meta' },
-          h('span', {
-            className: 'dsh-todo-metaId',
-            title: t('card.id', { id: item.id }),
-          }, `#${shortId(item)}`),
-          h('span', {
-            className: 'dsh-todo-metaTime',
-            title: item.updatedAt,
-          }, t('card.updated', { time: formatStamp(item.updatedAt) })),
-          showWorkspace === true
-            ? h('span', {
-              className: 'dsh-todo-metaWorkspace',
-              title: item.workspacePath,
-            }, item.workspaceLabel)
-            : null))
+      return h('li', {
+        className: 'dsh-todo-card',
+        'data-done': item.done ? 'true' : 'false',
+        role: 'button',
+        tabIndex: 0,
+        'aria-label': t('card.viewHint', { title: item.title }),
+        onClick: () => {
+          // Selecting the summary to copy must not open the dialog.
+          const selection = window.getSelection()
+          if (selection !== null && selection.toString() !== '') return
+          onOpenDetail(item)
+        },
+        onKeyDown: (event) => {
+          if (event.target !== event.currentTarget) return
+          if (event.key !== 'Enter' && event.key !== ' ') return
+          event.preventDefault()
+          onOpenDetail(item)
+        },
+      },
+      h('div', { className: 'dsh-todo-cardHead' },
+        h('span', { className: 'dsh-todo-status' }, item.done ? t('card.done') : t('card.open')),
+        h('div', { className: 'dsh-todo-cardActions' },
+          sendControl('execute', ExecuteGlyph, t('execute.label')),
+          sendControl('explain', ExplainGlyph, t('explain.label')))),
+      h('div', { className: 'dsh-todo-cardTitle' }, item.title),
+      item.summary === '' ? null : h('p', { className: 'dsh-todo-cardSummary' }, item.summary),
+      h('div', { className: 'dsh-todo-meta' },
+        h('span', {
+          className: 'dsh-todo-metaId',
+          title: t('card.id', { id: item.id }),
+        }, `#${shortId(item)}`),
+        h('button', {
+          type: 'button',
+          className: 'dsh-todo-copyId',
+          'aria-label': copied ? t('card.idCopied') : t('card.idCopy'),
+          title: copied ? t('card.idCopied') : t('card.idCopy'),
+          onClick: copyId,
+        }, copied ? h(CheckGlyph) : h(CopyGlyph)),
+        h('span', {
+          className: 'dsh-todo-metaTime',
+          title: item.updatedAt,
+        }, t('card.updated', { time: formatStamp(item.updatedAt) })),
+        showWorkspace === true
+          ? h('span', {
+            className: 'dsh-todo-metaWorkspace',
+            title: item.workspacePath,
+          }, item.workspaceLabel)
+          : null))
     }
 
     /**
-     * The editing dialog: one large modal over the whole window.
+     * The read-only detail dialog: title, summary, Markdown details and the
+     * record's metadata.
      *
      * A native `<dialog>` opened with `showModal()` lives in the browser's top
-     * layer, so it is centred in the viewport even inside the right-Sidebar
-     * pane's transformed column, blocks the rest of the page, traps Tab and
-     * turns Escape into a cancel. The dialog is resizable from its bottom-right
-     * corner and toggles between that size and the whole window.
+     * layer, so it is centred over the viewport in either surface, blocks the
+     * rest of the page, traps Tab and turns Escape into a close. It is
+     * resizable from its bottom-right corner and toggles between that size and
+     * the whole window.
      *
-     * @param props - `t`, the edited item, its draft, and the draft, cancel and
-     *   save callbacks.
+     * @param props - `t`, the record to show, the close callback, and the error
+     *   reporter for a refused clipboard write.
      * @returns the dialog element.
      */
-    function TodoEditorDialog(props) {
-      const { t, item, draft, onDraftChange, onCancel, onSave } = props
+    function TodoDetailDialog(props) {
+      const { t, item, onClose, onError } = props
       const dialogRef = React.useRef(null)
-      const textRef = React.useRef(null)
-      const cancelRef = React.useRef(onCancel)
-      cancelRef.current = onCancel
+      const closeRef = React.useRef(onClose)
+      closeRef.current = onClose
       const [maximized, setMaximized] = React.useState(false)
+      const [copied, setCopied] = React.useState(false)
+      const copyTimer = React.useRef(0)
 
       React.useEffect(() => {
         const dialog = dialogRef.current
@@ -1145,68 +1133,93 @@ window.__ModuleLoader__.load({
         if (!dialog.open) dialog.showModal()
         const onNativeCancel = (event) => {
           event.preventDefault()
-          cancelRef.current()
+          closeRef.current()
         }
         dialog.addEventListener('cancel', onNativeCancel)
-        if (textRef.current !== null) textRef.current.focus()
         return () => {
           dialog.removeEventListener('cancel', onNativeCancel)
           if (dialog.open) dialog.close()
         }
       }, [])
 
+      React.useEffect(() => () => { window.clearTimeout(copyTimer.current) }, [])
+
+      const blocks = React.useMemo(() => parseBlocks(item.details), [item.details])
+
+      const copyId = async () => {
+        try {
+          await navigator.clipboard.writeText(item.id)
+          setCopied(true)
+          window.clearTimeout(copyTimer.current)
+          copyTimer.current = window.setTimeout(() => { setCopied(false) }, 1500)
+        } catch (cause) {
+          onError(cause)
+        }
+      }
+
+      const header = h('header', { className: 'dsh-todo-dialogHead' },
+        h('span', { className: 'dsh-todo-dialogTitle' }, t('detail.title')),
+        h('span', { className: 'dsh-todo-metaId', title: t('card.id', { id: item.id }) }, `#${shortId(item)}`),
+        h('button', {
+          type: 'button',
+          className: 'dsh-todo-copyId',
+          'aria-label': copied ? t('card.idCopied') : t('card.idCopy'),
+          title: copied ? t('card.idCopied') : t('card.idCopy'),
+          onClick: copyId,
+        }, copied ? h(CheckGlyph) : h(CopyGlyph)),
+        h('span', { className: 'dsh-todo-dialogActions' },
+          h('button', {
+            type: 'button',
+            className: 'dsh-todo-iconButton',
+            'aria-label': maximized ? t('detail.restore') : t('detail.maximize'),
+            title: maximized ? t('detail.restore') : t('detail.maximize'),
+            onClick: () => { setMaximized(value => !value) },
+          }, maximized ? h(RestoreGlyph) : h(MaximizeGlyph)),
+          h('button', {
+            type: 'button',
+            className: 'dsh-todo-iconButton',
+            'aria-label': t('detail.close'),
+            title: t('detail.close'),
+            onClick: onClose,
+          }, h(CloseGlyph))))
+
+      const meta = h('dl', { className: 'dsh-todo-detailMeta' },
+        h('div', null,
+          h('dt', null, t('detail.status')),
+          h('dd', null, item.done ? t('card.done') : t('card.open'))),
+        h('div', null,
+          h('dt', null, t('detail.workspace')),
+          h('dd', { title: item.workspacePath }, item.workspaceLabel)),
+        h('div', null,
+          h('dt', null, t('detail.updated')),
+          h('dd', null, formatStamp(item.updatedAt))),
+        h('div', null,
+          h('dt', null, t('detail.created')),
+          h('dd', null, formatStamp(item.createdAt))))
+
+      const body = h('div', { className: 'dsh-todo-dialogBody' },
+        h('div', { className: 'dsh-todo-detail' },
+          h('h2', { className: 'dsh-todo-detailTitle' }, item.title),
+          item.summary === '' ? null : h('p', { className: 'dsh-todo-detailSummary' }, item.summary),
+          item.details === ''
+            ? h('p', { className: 'dsh-todo-empty' }, t('detail.noDetails'))
+            : h('div', { className: 'dsh-todo-md dsh-todo-detailBody' }, renderMarkdown(blocks)),
+          meta))
+
+      const footer = h('footer', { className: 'dsh-todo-dialogFoot' },
+        h('span', { className: 'dsh-todo-hint' }, ''),
+        h('button', {
+          type: 'button',
+          className: 'dsh-todo-outline',
+          onClick: onClose,
+        }, t('detail.close')))
+
       return h('dialog', {
         ref: dialogRef,
         className: 'dsh-todo-dialog',
         'data-maximized': maximized ? 'true' : 'false',
-        'aria-label': t('edit.title'),
-      },
-      h('div', { className: 'dsh-todo-dialogInner' },
-        h('header', { className: 'dsh-todo-dialogHead' },
-          h('span', { className: 'dsh-todo-dialogTitle' }, t('edit.title')),
-          h('span', { className: 'dsh-todo-metaId', title: t('card.id', { id: item.id }) }, `#${shortId(item)}`),
-          h('span', { className: 'dsh-todo-dialogActions' },
-            h('button', {
-              type: 'button',
-              className: 'dsh-todo-iconButton',
-              'aria-label': maximized ? t('edit.restore') : t('edit.maximize'),
-              title: maximized ? t('edit.restore') : t('edit.maximize'),
-              onClick: () => { setMaximized(value => !value) },
-            }, maximized ? h(RestoreGlyph) : h(MaximizeGlyph)),
-            h('button', {
-              type: 'button',
-              className: 'dsh-todo-iconButton',
-              'aria-label': t('edit.close'),
-              title: t('edit.close'),
-              onClick: onCancel,
-            }, h(CloseGlyph)))),
-        h('div', { className: 'dsh-todo-dialogBody' },
-          h('textarea', {
-            ref: textRef,
-            className: 'dsh-todo-input dsh-todo-textarea dsh-todo-dialogText',
-            value: draft,
-            'aria-label': t('edit.label'),
-            onChange: (event) => { onDraftChange(event.target.value) },
-            onKeyDown: (event) => {
-              if (event.key === 'Enter' && (event.ctrlKey || event.metaKey)) {
-                event.preventDefault()
-                onSave()
-              }
-            },
-          })),
-        h('footer', { className: 'dsh-todo-dialogFoot' },
-          h('span', { className: 'dsh-todo-hint' }, t('edit.hint')),
-          h('button', {
-            type: 'button',
-            className: 'dsh-todo-outline',
-            onClick: onCancel,
-          }, t('edit.cancel')),
-          h('button', {
-            type: 'button',
-            className: 'dsh-todo-primary',
-            disabled: draft.trim() === '',
-            onClick: onSave,
-          }, t('edit.save')))))
+        'aria-label': t('detail.title'),
+      }, h('div', { className: 'dsh-todo-dialogInner' }, header, body, footer))
     }
 
     /**
@@ -1215,7 +1228,8 @@ window.__ModuleLoader__.load({
      * It reads workspaces through the injected `useTodoWorkspaces` hook, the
      * Session cards send into through `currentSessionSource`, and the notebook
      * through the Host, and re-reads the Host on a short interval so a card the
-     * agent wrote appears while the page is open.
+     * agent wrote appears while the page is open. The page is read-only: a card
+     * opens {@link TodoDetailDialog}, and the agent owns every change.
      *
      * @param props - `t`, the workspace hook, `currentSessionSource`,
      *   `closeBoard` and `board`.
@@ -1229,16 +1243,12 @@ window.__ModuleLoader__.load({
         currentSessionSource.subscribe,
         currentSessionSource.getSnapshot,
       )
-      const workspacesPending = useTodoWorkspaces(snapshot => snapshot.phase !== 'ready')
       const workspacesRef = React.useRef(workspaces)
       workspacesRef.current = workspaces
 
-      const { items, error, adopt, report, refresh } = useBoardItems(board)
-      const editor = useTodoEditing({ board, items, adopt, report })
+      const { items, error, report, refresh } = useBoardItems(board)
       const migrated = React.useRef(false)
-
-      const [draftText, setDraftText] = React.useState('')
-      const [draftWorkspacePath, setDraftWorkspacePath] = React.useState('')
+      const [detailId, setDetailId] = React.useState(null)
 
       React.useEffect(() => {
         // One-time move of entries the first version of this page kept in
@@ -1255,17 +1265,10 @@ window.__ModuleLoader__.load({
         })()
       }, [items, board, refresh, report])
 
-      const options = React.useMemo(
-        () => workspaces.map(workspace => ({
-          path: workspace.path,
-          label: workspaceLabel(workspace),
-        })),
-        [workspaces],
-      )
-
-      const selectedWorkspacePath = options.some(option => option.path === draftWorkspacePath)
-        ? draftWorkspacePath
-        : (options.length > 0 ? options[0].path : '')
+      React.useEffect(() => {
+        if (detailId === null || items === null) return
+        if (!items.some(item => item.id === detailId)) setDetailId(null)
+      }, [items, detailId])
 
       const openItems = React.useMemo(
         () => (items === null ? [] : items.filter(item => !item.done)),
@@ -1279,26 +1282,11 @@ window.__ModuleLoader__.load({
         () => groupItems(openItems, workspaces),
         [openItems, workspaces],
       )
-      const editingItem = items === null ? undefined : items.find(candidate => candidate.id === editor.editingId)
+      const detailItem = items === null || detailId === null
+        ? undefined
+        : items.find(item => item.id === detailId)
 
-      const addTodo = async () => {
-        const text = draftText.trim()
-        if (text === '' || selectedWorkspacePath === '') return
-        const option = options.find(candidate => candidate.path === selectedWorkspacePath)
-        try {
-          const value = await board.add({
-            text,
-            workspace: selectedWorkspacePath,
-            label: option === undefined ? undefined : option.label,
-          })
-          adopt(value)
-          setDraftText('')
-        } catch (cause) {
-          report(cause)
-        }
-      }
-
-      const addDisabled = draftText.trim() === '' || selectedWorkspacePath === ''
+      const openDetail = (item) => { setDetailId(item.id) }
 
       const send = (item, kind) => {
         if (sessionId === undefined) return Promise.reject(new Error(t('send.disabled')))
@@ -1317,40 +1305,6 @@ window.__ModuleLoader__.load({
           }, t('page.back'))),
         h('div', { className: 'dsh-todo-body' },
           h('div', { className: 'dsh-todo-column' },
-            h('form', {
-              className: 'dsh-todo-addCard',
-              onSubmit: (event) => { event.preventDefault(); void addTodo() },
-            },
-            h('textarea', {
-              className: 'dsh-todo-input dsh-todo-textarea',
-              value: draftText,
-              rows: 2,
-              placeholder: t('add.placeholder'),
-              'aria-label': t('add.placeholder'),
-              onChange: (event) => { setDraftText(event.target.value) },
-              onKeyDown: (event) => {
-                if (event.key !== 'Enter' || !(event.ctrlKey || event.metaKey)) return
-                event.preventDefault()
-                void addTodo()
-              },
-            }),
-            h('div', { className: 'dsh-todo-addBar' },
-              h('select', {
-                className: 'dsh-todo-select',
-                value: selectedWorkspacePath,
-                'aria-label': t('add.workspace'),
-                disabled: options.length === 0,
-                onChange: (event) => { setDraftWorkspacePath(event.target.value) },
-              },
-              options.length === 0
-                ? h('option', { value: '' }, workspacesPending ? t('page.loading') : t('add.noWorkspace'))
-                : options.map(option => h('option', { key: option.path, value: option.path }, option.label))),
-              h('span', { className: 'dsh-todo-hint' }, t('add.hint')),
-              h('button', {
-                type: 'submit',
-                className: 'dsh-todo-primary',
-                disabled: addDisabled,
-              }, t('add.submit')))),
             error === null ? null : h('p', { className: 'dsh-todo-error', role: 'alert' }, error),
             items === null
               ? h('p', { className: 'dsh-todo-empty' }, t('page.loadingBoard'))
@@ -1369,31 +1323,29 @@ window.__ModuleLoader__.load({
                         h(TodoCardList, {
                           t,
                           items: group.items,
-                          editor,
                           className: 'dsh-todo-cards',
+                          onOpenDetail: openDetail,
                           onSend: send,
                           canSend: sessionId !== undefined,
-                          onSendError: report,
+                          onError: report,
                         })))),
                   h(CompletedSection, {
                     key: 'done',
                     t,
                     items: doneItems,
-                    editor,
                     className: 'dsh-todo-cards',
                     showWorkspace: true,
+                    onOpenDetail: openDetail,
                     onSend: send,
                     canSend: sessionId !== undefined,
-                    onSendError: report,
+                    onError: report,
                   }),
                 ])),
-        editingItem === undefined ? null : h(TodoEditorDialog, {
+        detailItem === undefined ? null : h(TodoDetailDialog, {
           t,
-          item: editingItem,
-          draft: editor.editingText,
-          onDraftChange: editor.setEditingText,
-          onCancel: editor.cancel,
-          onSave: editor.save,
+          item: detailItem,
+          onClose: () => { setDetailId(null) },
+          onError: report,
         }))
     }
 
@@ -1403,7 +1355,8 @@ window.__ModuleLoader__.load({
      *
      * The Session's workspace is resolved from the workspace catalog, so the
      * page follows the Session it was opened in: each Session's surface holds
-     * its own tab, and the tab shows that Session's workspace only.
+     * its own tab, and the tab shows that Session's workspace only. Like the
+     * page, it is read-only.
      *
      * @param props - `t`, the slot's `sessionId`, `useTodoWorkspaces` and `board`.
      * @returns the panel element.
@@ -1413,9 +1366,8 @@ window.__ModuleLoader__.load({
 
       const workspaces = useTodoWorkspaces(snapshot => snapshot.items)
       const ready = useTodoWorkspaces(snapshot => snapshot.phase === 'ready')
-      const { items, error, adopt, report } = useBoardItems(board)
-      const editor = useTodoEditing({ board, items, adopt, report })
-      const [draftText, setDraftText] = React.useState('')
+      const { items, error, report } = useBoardItems(board)
+      const [detailId, setDetailId] = React.useState(null)
 
       const workspace = workspaces.find(candidate => (
         Array.isArray(candidate.sessionIds) && candidate.sessionIds.includes(sessionId)
@@ -1436,22 +1388,17 @@ window.__ModuleLoader__.load({
         () => visible.filter(item => item.done),
         [visible],
       )
-      const editingItem = items === null ? undefined : items.find(candidate => candidate.id === editor.editingId)
 
-      const addTodo = async () => {
-        const text = draftText.trim()
-        if (text === '' || workspace === undefined) return
-        try {
-          adopt(await board.add({
-            text,
-            workspace: workspace.path,
-            label: workspaceLabel(workspace),
-          }))
-          setDraftText('')
-        } catch (cause) {
-          report(cause)
-        }
-      }
+      React.useEffect(() => {
+        if (detailId === null || items === null) return
+        if (!items.some(item => item.id === detailId)) setDetailId(null)
+      }, [items, detailId])
+
+      const detailItem = items === null || detailId === null
+        ? undefined
+        : items.find(item => item.id === detailId)
+
+      const openDetail = (item) => { setDetailId(item.id) }
 
       const send = (item, kind) => {
         if (sessionId === undefined) return Promise.reject(new Error(t('send.disabled')))
@@ -1472,31 +1419,6 @@ window.__ModuleLoader__.load({
         workspace === undefined
           ? (ready ? h('p', { className: 'dsh-todo-empty' }, t('panel.noWorkspace')) : null)
           : [
-            h('form', {
-              key: 'add',
-              className: 'dsh-todo-panelAdd',
-              onSubmit: (event) => { event.preventDefault(); void addTodo() },
-            },
-            h('textarea', {
-              className: 'dsh-todo-input dsh-todo-textarea',
-              value: draftText,
-              rows: 2,
-              placeholder: t('panel.addPlaceholder'),
-              'aria-label': t('panel.addPlaceholder'),
-              onChange: (event) => { setDraftText(event.target.value) },
-              onKeyDown: (event) => {
-                if (event.key !== 'Enter' || !(event.ctrlKey || event.metaKey)) return
-                event.preventDefault()
-                void addTodo()
-              },
-            }),
-            h('div', { className: 'dsh-todo-panelAddBar' },
-              h('span', { className: 'dsh-todo-hint' }, t('add.hint')),
-              h('button', {
-                type: 'submit',
-                className: 'dsh-todo-primary',
-                disabled: draftText.trim() === '',
-              }, t('add.submit')))),
             error === null ? null : h('p', { key: 'error', className: 'dsh-todo-error', role: 'alert' }, error),
             items === null
               ? h('p', { key: 'loading', className: 'dsh-todo-empty' }, t('page.loadingBoard'))
@@ -1509,31 +1431,29 @@ window.__ModuleLoader__.load({
                       key: 'cards',
                       t,
                       items: openItems,
-                      editor,
                       className: 'dsh-todo-panelCards',
+                      onOpenDetail: openDetail,
                       onSend: send,
                       canSend: sessionId !== undefined,
-                      onSendError: report,
+                      onError: report,
                     }),
                   h(CompletedSection, {
                     key: 'done',
                     t,
                     items: doneItems,
-                    editor,
                     className: 'dsh-todo-panelCards',
+                    onOpenDetail: openDetail,
                     onSend: send,
                     canSend: sessionId !== undefined,
-                    onSendError: report,
+                    onError: report,
                   }),
                 ],
           ],
-        editingItem === undefined ? null : h(TodoEditorDialog, {
+        detailItem === undefined ? null : h(TodoDetailDialog, {
           t,
-          item: editingItem,
-          draft: editor.editingText,
-          onDraftChange: editor.setEditingText,
-          onCancel: editor.cancel,
-          onSave: editor.save,
+          item: detailItem,
+          onClose: () => { setDetailId(null) },
+          onError: report,
         }))
     }
 
@@ -1605,81 +1525,12 @@ html[data-platform='darwin'] .dsh-todo-head {
   flex-direction: column;
   gap: 24px;
 }
-/* ---------------------------------------------------------- add card */
-.dsh-todo-addCard {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  box-sizing: border-box;
-  padding: 12px 14px;
-  background: var(--dsw-alias-bg-layer-1);
-  border: 0.5px solid var(--dsw-alias-border-l3);
-  border-radius: var(--dsw-radius-lg);
-  box-shadow: var(--dsw-shadow-sm, none);
-}
-.dsh-todo-addBar {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 8px;
-}
+/* ---------------------------------------------------------- controls */
 .dsh-todo-hint {
   flex: 1 1 auto;
   font-size: 12px;
   line-height: 18px;
   color: var(--dsw-alias-label-tertiary);
-}
-/* ------------------------------------------------------------ inputs */
-.dsh-todo-input,
-.dsh-todo-select {
-  box-sizing: border-box;
-  padding: 0 10px;
-  font: inherit;
-  font-size: 13px;
-  line-height: 20px;
-  color: var(--dsw-alias-label-primary);
-  background: var(--dsw-alias-bg-base);
-  border: 0.5px solid var(--dsw-alias-border-l3);
-  border-radius: var(--dsw-radius-md);
-}
-.dsh-todo-input {
-  height: 32px;
-}
-.dsh-todo-select {
-  flex: 0 1 auto;
-  height: 32px;
-  max-width: 220px;
-  padding-right: 6px;
-}
-.dsh-todo-textarea {
-  height: auto;
-  padding: 8px 10px;
-  resize: vertical;
-  font-family: inherit;
-}
-.dsh-todo-input::placeholder {
-  color: var(--dsw-alias-label-tertiary);
-}
-.dsh-todo-select:disabled {
-  color: var(--dsw-alias-label-tertiary);
-  cursor: default;
-}
-.dsh-todo-primary {
-  flex: none;
-  height: 32px;
-  padding: 0 14px;
-  font: inherit;
-  font-size: 13px;
-  line-height: 20px;
-  color: var(--dsw-alias-label-primary-foreground);
-  background: var(--dsw-alias-button-primary-fill);
-  border: 0;
-  border-radius: var(--dsw-radius-md);
-  cursor: pointer;
-}
-.dsh-todo-primary:disabled {
-  opacity: 0.5;
-  cursor: default;
 }
 .dsh-todo-outline {
   flex: none;
@@ -1694,24 +1545,17 @@ html[data-platform='darwin'] .dsh-todo-head {
   border-radius: var(--dsw-radius-md);
   cursor: pointer;
 }
-.dsh-todo-input:focus-visible,
-.dsh-todo-select:focus-visible,
-.dsh-todo-primary:focus-visible,
 .dsh-todo-outline:focus-visible,
 .dsh-todo-iconButton:focus-visible,
-.dsh-todo-check:focus-visible {
+.dsh-todo-card:focus-visible {
   outline: var(--dsw-focus-ring-width) solid var(--dsw-focus-ring-color, var(--dsw-alias-state-business-primary));
   outline-offset: 1px;
 }
 @media (hover: hover) {
-  .dsh-todo-primary:hover:not(:disabled) {
-    background: var(--dsw-alias-button-primary-hover);
-  }
   .dsh-todo-outline:hover {
     background: var(--dsw-alias-interactive-bg-hover);
   }
 }
-.dsh-todo-primary:active:not(:disabled),
 .dsh-todo-outline:active {
   background: var(--dsw-alias-interactive-bg-active);
 }
@@ -1816,9 +1660,16 @@ html[data-platform='darwin'] .dsh-todo-head {
   border: 0.5px solid var(--dsw-alias-border-l3);
   border-radius: var(--dsw-radius-lg);
   box-shadow: var(--dsw-shadow-sm, none);
+  cursor: pointer;
+  transition: border-color 120ms ease;
 }
 .dsh-todo-card[data-done='true'] {
   background: var(--dsw-alias-bg-base);
+}
+@media (hover: hover) {
+  .dsh-todo-card:hover {
+    border-color: var(--dsw-alias-label-tertiary);
+  }
 }
 .dsh-todo-cardHead {
   display: flex;
@@ -1826,28 +1677,31 @@ html[data-platform='darwin'] .dsh-todo-head {
   justify-content: space-between;
   gap: 8px;
 }
-.dsh-todo-checkWrap {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  min-width: 0;
-  cursor: pointer;
-  user-select: none;
-}
-.dsh-todo-check {
-  flex: none;
-  width: 15px;
-  height: 15px;
-  margin: 0;
-  accent-color: var(--dsw-alias-brand-primary);
-  cursor: pointer;
-}
 .dsh-todo-status {
   font-size: 12px;
   line-height: 18px;
   color: var(--dsw-alias-label-tertiary);
 }
-.dsh-todo-card[data-done='true'] .dsh-todo-status {
+.dsh-todo-cardTitle {
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 21px;
+  overflow-wrap: anywhere;
+}
+.dsh-todo-cardSummary {
+  display: -webkit-box;
+  margin: 0;
+  overflow: hidden;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+  font-size: 13px;
+  line-height: 20px;
+  color: var(--dsw-alias-label-secondary);
+}
+.dsh-todo-card[data-done='true'] .dsh-todo-cardTitle,
+.dsh-todo-card[data-done='true'] .dsh-todo-cardSummary {
   color: var(--dsw-alias-label-tertiary);
 }
 .dsh-todo-cardActions {
@@ -1874,9 +1728,6 @@ html[data-platform='darwin'] .dsh-todo-head {
   border-radius: var(--dsw-radius-sm);
   cursor: pointer;
 }
-.dsh-todo-iconButton[data-variant='danger'] {
-  color: var(--dsw-alias-state-error-primary);
-}
 .dsh-todo-iconButton:disabled {
   opacity: 0.35;
   cursor: default;
@@ -1893,10 +1744,6 @@ html[data-platform='darwin'] .dsh-todo-head {
   font-size: 13px;
   line-height: 20px;
   overflow-wrap: anywhere;
-}
-.dsh-todo-card[data-done='true'] .dsh-todo-md {
-  color: var(--dsw-alias-label-tertiary);
-  text-decoration: line-through;
 }
 .dsh-todo-md > :first-child {
   margin-top: 0;
@@ -1987,6 +1834,31 @@ h6.dsh-todo-mdH { font-size: 13px; }
   border: 0.5px solid var(--dsw-alias-border-l3);
   border-radius: var(--dsw-radius-sm);
 }
+.dsh-todo-copyId {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 17px;
+  margin-left: -6px;
+  padding: 0;
+  color: var(--dsw-alias-label-tertiary);
+  background: transparent;
+  border: 0;
+  border-radius: var(--dsw-radius-sm);
+  cursor: pointer;
+}
+@media (hover: hover) {
+  .dsh-todo-copyId:hover {
+    color: var(--dsw-alias-label-primary);
+    background: var(--dsw-alias-interactive-bg-hover);
+  }
+}
+.dsh-todo-copyId:focus-visible {
+  outline: var(--dsw-focus-ring-width) solid var(--dsw-focus-ring-color, var(--dsw-alias-state-business-primary));
+  outline-offset: 1px;
+}
 .dsh-todo-metaTime {
   flex: none;
   font-variant-numeric: tabular-nums;
@@ -1997,7 +1869,7 @@ h6.dsh-todo-mdH { font-size: 13px; }
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-/* ------------------------------------------------------------ editor */
+/* -------------------------------------------------------- detail dialog */
 /* One scrim value rather than a theme token: a modal backdrop must stay
    translucent in both themes, and no --dsw-alias-* token promises that. */
 .dsh-todo-dialog {
@@ -2067,15 +1939,49 @@ h6.dsh-todo-mdH { font-size: 13px; }
   box-sizing: border-box;
   padding: 12px;
 }
-.dsh-todo-dialogText {
+.dsh-todo-detail {
   flex: 1;
-  width: 100%;
-  height: auto;
+  min-width: 0;
   min-height: 0;
-  resize: none;
-  font-family: inherit;
-  font-size: 13px;
-  line-height: 20px;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+.dsh-todo-detailTitle {
+  margin: 0;
+  font-size: 17px;
+  font-weight: 600;
+  line-height: 24px;
+  overflow-wrap: anywhere;
+}
+.dsh-todo-detailSummary {
+  margin: 8px 0 0;
+  color: var(--dsw-alias-label-secondary);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.dsh-todo-detailBody {
+  margin-top: 16px;
+}
+.dsh-todo-detailMeta {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 6px 12px;
+  margin: 20px 0 0;
+  padding-top: 12px;
+  border-top: 0.5px solid var(--dsw-alias-border-l3);
+  font-size: 12px;
+  line-height: 18px;
+}
+.dsh-todo-detailMeta > div {
+  display: contents;
+}
+.dsh-todo-detailMeta dt {
+  color: var(--dsw-alias-label-tertiary);
+}
+.dsh-todo-detailMeta dd {
+  margin: 0;
+  color: var(--dsw-alias-label-secondary);
+  overflow-wrap: anywhere;
 }
 .dsh-todo-dialogFoot {
   flex: none;
@@ -2125,21 +2031,6 @@ h6.dsh-todo-mdH { font-size: 13px; }
   font-size: 12px;
   line-height: 18px;
   color: var(--dsw-alias-label-tertiary);
-}
-.dsh-todo-panelAdd {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  box-sizing: border-box;
-  padding: 10px 12px;
-  background: var(--dsw-alias-bg-layer-1);
-  border: 0.5px solid var(--dsw-alias-border-l3);
-  border-radius: var(--dsw-radius-lg);
-}
-.dsh-todo-panelAddBar {
-  display: flex;
-  align-items: center;
-  gap: 8px;
 }
 .dsh-todo-panelCards {
   display: flex;
