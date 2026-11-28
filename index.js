@@ -86,6 +86,48 @@ function deriveTitle(source) {
 }
 
 /**
+ * Leading status decorations that do not belong in a title.
+ *
+ * The board renders status from the `done`/`confirmed` flags, so a title that
+ * starts with "已完成｜", a check mark or "[x]" is status in the wrong place.
+ * Each pattern requires a separator (or the marker alone) so a title such as
+ * "已完成状态的迁移" keeps its wording.
+ */
+const TITLE_STATUS_PREFIXES = [
+  /^\*\*(?:已完成|已确认|进行中|分析中|待验证|待办|完成)\*\*\s*[｜|:：\-—]\s*/,
+  /^(?:已完成|已确认|进行中|分析中|待验证|待办|完成)\s*[｜|:：\-—]\s*/,
+  /^(?:Done|DONE|done)\s*[:：\-—]\s*/,
+  /^[✅✔✓☑]\uFE0F?\s*/,
+  /^\[[xX ]\]\s*/,
+]
+
+/**
+ * Remove a leading status decoration from a title.
+ *
+ * Stripping runs until the title stops changing, so "✅ 已完成｜X" loses both
+ * markers. A title that is nothing but markers is left alone rather than
+ * becoming empty.
+ *
+ * @param value - the title as written by the agent or read from disk.
+ * @returns the title without leading status decorations.
+ */
+function cleanTitle(value) {
+  let title = value.trim()
+  let changed = true
+  while (changed) {
+    changed = false
+    for (const pattern of TITLE_STATUS_PREFIXES) {
+      const next = title.replace(pattern, '').trim()
+      if (next !== title && next !== '') {
+        title = next
+        changed = true
+      }
+    }
+  }
+  return title
+}
+
+/**
  * Read and validate one stored record.
  *
  * Two fields arrived after the first release, so older files are read
@@ -130,9 +172,9 @@ function normalizeItem(value, index) {
   }
   const legacyText = typeof text === 'string' ? text : ''
   const resolvedDetails = typeof details === 'string' ? details : legacyText
-  const resolvedTitle = typeof title === 'string' && title.trim() !== ''
-    ? title.trim()
-    : deriveTitle(resolvedDetails)
+  const resolvedTitle = cleanTitle(
+    typeof title === 'string' && title.trim() !== '' ? title : deriveTitle(resolvedDetails),
+  )
   if (resolvedTitle === '') {
     throw new Error(`todo board: item "${id}" has no title`)
   }
@@ -321,7 +363,7 @@ async function dispatch(payload) {
   }
 
   if (action === 'add') {
-    const title = requireText(input.title, 'title')
+    const title = cleanTitle(requireText(input.title, 'title'))
     const summary = optionalText(input.summary, 'summary') ?? ''
     const details = optionalText(input.details, 'details') ?? ''
     const workspacePath = requireText(input.workspace, 'workspace')
@@ -348,7 +390,8 @@ async function dispatch(payload) {
 
   if (action === 'update') {
     const id = requireText(input.id, 'id')
-    const title = optionalText(input.title, 'title')
+    const rawTitle = optionalText(input.title, 'title')
+    const title = rawTitle === undefined ? undefined : cleanTitle(rawTitle)
     // An empty string clears these two; omitting them leaves them alone.
     const summary = input.summary === undefined ? undefined : (optionalText(input.summary, 'summary') ?? '')
     const details = input.details === undefined ? undefined : (optionalText(input.details, 'details') ?? '')
@@ -400,7 +443,22 @@ async function dispatch(payload) {
     })
   }
 
-  throw new Error(`todo board: unknown action "${String(action)}"; use list, add, update or remove`)
+  // Not a model-facing action: the page's "clear confirmed" button calls it.
+  // Requiring confirmed=true keeps the bulk delete to cards the user accepted
+  // and cannot be pointed at open work.
+  if (action === 'clear') {
+    if (input.confirmed !== true) {
+      throw new Error('todo board: "clear" removes only confirmed todos; pass confirmed: true')
+    }
+    return serialized(async () => {
+      const records = await readStore()
+      const kept = records.filter(item => item.confirmed !== true)
+      if (kept.length !== records.length) await persist(kept)
+      return snapshot(kept)
+    })
+  }
+
+  throw new Error(`todo board: unknown action "${String(action)}"; use list, add, update, remove or clear`)
 }
 
 /** Argument schema the model sees. */
@@ -423,7 +481,7 @@ const TOOL_PARAMETERS = {
     },
     title: {
       type: 'string',
-      description: 'The one-line title shown on the card. Required by add; replacing it updates the card heading.',
+      description: 'The one-line title shown on the card. Plain content only: never prefix it with a status such as “已完成”, “进行中”, ✅, ✔ or [x] — set done instead. A leading status decoration is stripped before storing.',
     },
     summary: {
       type: 'string',
@@ -435,7 +493,7 @@ const TOOL_PARAMETERS = {
     },
     done: {
       type: 'boolean',
-      description: 'The agent-side completion flag: true when your work on this todo is finished. Independent of the user’s confirmation.',
+      description: 'Your completion flag: true when your work on this todo is finished. This is where completion belongs — not in the title. Independent of the user’s confirmation.',
     },
     confirmed: {
       type: 'boolean',
@@ -563,6 +621,8 @@ export function apply(ctx) {
       + 'One notebook is shared by every workspace; each todo carries the workspace directory it belongs to, '
       + 'a title, a short summary and Markdown details. `done` is your completion flag and `confirmed` is the user’s acceptance, '
       + 'which the board toggles with its Confirm control and which you may flip when the user asks you to. '
+      + 'Status lives only in those flags: never write “已完成”, “进行中”, ✅ or [x] into the title, summary or details, and '
+      + 'drop such a prefix when you touch a title that has one. '
       + 'Call list first to get ids, then add, update (title, summary, details, done, confirmed, workspace or label), or remove. '
       + 'Every result lists todos newest-modified first and carries each todo\'s updatedAt and confirmed flag. '
       + 'Changes appear in the page within a few seconds and need no reload.',
@@ -572,6 +632,20 @@ export function apply(ctx) {
       render: (_args, value) => renderSnapshot(value),
     },
     execute: args => dispatch(args),
+  })
+
+  // Status belongs in the flags, not in the text. The tool description says so
+  // per call; this section says it once for every step, which is what keeps the
+  // model from drifting back into prefixing titles with a status.
+  ctx.inject(['systemPrompt'], (scope) => {
+    scope.effect(() => scope.systemPrompt.section({
+      name: 'plugin:workspace-todos',
+      order: 150,
+      text: 'Workspace todo board: keep completion status out of the record text. '
+        + 'When work on a todo is finished, call workspace_todos with action=update, its id and done=true; '
+        + 'never prefix a title, summary or details with 已完成/进行中, check marks or [x]. '
+        + 'The user confirms finished cards on the board: confirmed is theirs, and you may flip it only when they ask.',
+    }), 'todo-board: prompt section')
   })
 
   // An exact Fetch route on the shared `/api` channel: carrier-neutral (works

@@ -15,16 +15,20 @@ and summary on the card, the full details in a dialog.
   conversation is visible from every other one.
 - **Title, summary, details.** Every todo is three fields: a one-line title, a
   short plain-text summary and a Markdown body of details. The card shows the
-  first two; the details open in a dialog when the card is clicked.
+  first two; the details open in a dialog when the card is clicked. Status never
+  lives in that text: a leading `已完成｜`, `进行中｜`, ✅, ✔ or `[x]` decoration is
+  stripped from a title on write and on read, and the flags below carry it.
 - **Two completion states.** `done` is the agent's own flag, set when its work is
   finished; `confirmed` is the user's acceptance, flipped by the *Confirm done*
   control on the card or by the agent when the user asks it to relay that. They
   are independent: a card can be AI-finished but still pending confirmation, and
   confirming it does not claim the AI finished.
-- **Read-only apart from that confirmation.** The page has no add, edit or delete
-  control for content: the agent owns the title, summary, details and both flags
-  through the `workspace_todos` tool. Clicking a card opens the read-only detail
-  dialog — resizable from its corner, maximisable, Esc closes it.
+- **Read-only for content, with three human actions.** The page has no add or
+  edit control: the agent owns the title, summary, details and both flags through
+  the `workspace_todos` tool. People confirm a card, delete one card, or clear
+  the confirmed area; every destructive action asks first. Clicking a card opens
+  the read-only detail dialog — resizable from its corner, maximisable, Esc
+  closes it.
 - **Confirmed work folds away.** A confirmed card leaves its workspace group and
   moves into one *Confirmed* area at the bottom, collapsed by default; the
   right-Sidebar panel keeps the same area for its workspace only.
@@ -73,10 +77,12 @@ builtins.
 
 **Left sidebar → Workspace todos** opens the full board in the centre column:
 one group per workspace, a card per todo showing the AI status, the *Confirm
-done* control, title, summary and metadata. Clicking a card opens its detail
-dialog with the Markdown body, both statuses, the workspace, update and creation
-times, and a copy control for the id. **Back to conversation** returns to the
-chat.
+done* control, title, summary and metadata. The bin on a card deletes that one
+todo after a confirmation, and the *Clear* button on the *Confirmed* area deletes
+every confirmed card in one go, also after a confirmation. Clicking a card opens
+its detail dialog with the Markdown body, both statuses, the workspace, update
+and creation times, and a copy control for the id. **Back to conversation**
+returns to the chat.
 
 **Right Sidebar → + → Workspace todos** opens a panel scoped to the shown
 Session's workspace: it lists only that workspace's cards, with the same detail
@@ -98,6 +104,17 @@ makes appears without a reload.
 acceptance. The board's *Confirm* control flips `confirmed`, and the agent may
 flip it too when the user asks it to relay that decision — the two flags stay
 independent.
+
+Deleting is separate: `remove` deletes one id and is also what the card's bin
+calls. The page's bulk *Clear* uses a `clear` action that only the Host route
+accepts — it is a page-only action, not in the tool's action enum, and it refuses
+to run without the confirmed filter, so the agent cannot wipe the board by
+accident.
+
+A standing system-prompt section tells the model the same thing per step: finish
+work with `done=true`, never write a status prefix into the title. Titles that
+already have one are normalised on write and on read, so the board never shows
+`已完成｜…` again.
 
 Every action returns the complete notebook — title, summary, Markdown details
 and both flags included — ordered newest-modified first. Ids come from a
@@ -146,6 +163,10 @@ The notebook is one file:
 - The file keeps records in the order they were added; `list` and both surfaces
   sort by `updatedAt` instead of trusting that order.
 - The `#` badge is derived from `id`, not stored.
+- A leading status decoration in `title` is stripped on read and on write, so an
+  older file shows clean titles immediately and is rewritten without the prefix
+  on its next write. A title that is nothing but a marker is kept rather than
+  emptied.
 - `done` is the agent's completion flag and `confirmed` is the user's; both are
   stored, and a record written before the flag existed reads as unconfirmed.
 - The page talks to the Host through the exact Fetch route
@@ -162,10 +183,10 @@ links, task-list checkboxes, HTML, escapes — is rendered as plain text.
 
 ## Limitations
 
-- People cannot add, edit or delete content from the page: that is the point of
-  this release. The only human action is *Confirm done*, which flips the user's
-  own `confirmed` flag; the agent can flip the same flag when asked, and also
-  owns `done`. Ask the agent for anything else, or edit the JSON file directly.
+- People cannot add or edit content from the page: that is the point of this
+  release. Confirming, deleting one card and clearing the confirmed area are the
+  only human actions; the agent can do the same through the tool, and it also
+  owns `done`. Deletes are permanent — neither the bin nor *Clear* has an undo.
 - One file, one notebook: two DSH processes sharing one `DSH_HOME` write the
   same file, with no cross-process lock (last writer wins per operation).
 - Surfaces poll every 3 seconds rather than receiving a push, so a change the
@@ -198,11 +219,12 @@ links, task-list checkboxes, HTML, escapes — is rendered as plain text.
 
 ## Verification
 
-Checked for 2.2.0: `node --check` on both entry points; the Host harness extended
-so the tool schema exposes `confirmed` as a boolean the agent may set, alongside
-the existing checks that `update` flips it without touching `done`, that the flag
-is stored, and that an older record reads as unconfirmed; the browser-half
-registration pass; and the locale parity check (43 keys per language).
+Checked for 2.4.0: `node --check` on both entry points; the Host harness — the
+page-only `clear` action removes only confirmed records, refuses to run without
+the confirmed filter, rewrites the file, and stays out of the tool's action enum;
+the browser-half pass calls `board.clear()` with `{ action: 'clear', confirmed:
+true }`; plus the earlier title, flag and legacy-record checks, and the locale
+parity check (47 keys per language).
 
 Checked for 2.0.0: the Host harness against a throwaway `DSH_HOME` — add with
 the split fields, update and clearing of summary/details, the stored JSON shape,

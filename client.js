@@ -81,6 +81,10 @@ window.__ModuleLoader__.load({
       'card.confirmed': 'Confirmed',
       'card.pending': 'Pending',
       'card.unconfirm': 'Undo confirmation',
+      'card.delete': 'Delete todo',
+      'confirm.delete': 'Delete “{title}”? This cannot be undone.',
+      'section.clear': 'Clear',
+      'confirm.clear': 'Delete all {count} confirmed todos? This cannot be undone.',
       'card.updated': 'Updated {time}',
       'card.id': 'Todo id {id}',
       'card.idCopy': 'Copy todo id',
@@ -147,6 +151,10 @@ window.__ModuleLoader__.load({
       'card.confirmed': '已确认',
       'card.pending': '待确认',
       'card.unconfirm': '撤销确认',
+      'card.delete': '删除待办',
+      'confirm.delete': '删除「{title}」？此操作不可撤销。',
+      'section.clear': '清空',
+      'confirm.clear': '删除全部 {count} 条已确认待办？此操作不可撤销。',
       'card.updated': '修改于 {time}',
       'card.id': '待办 ID {id}',
       'card.idCopy': '复制待办 ID',
@@ -698,7 +706,7 @@ window.__ModuleLoader__.load({
      * @returns the list element.
      */
     function TodoCardList(props) {
-      const { t, items, className, showWorkspace, onOpenDetail, onSend, canSend, onError, onConfirm } = props
+      const { t, items, className, showWorkspace, onOpenDetail, onSend, canSend, onError, onConfirm, onDelete } = props
       return h('ul', { className },
         items.map(item => h(TodoCard, {
           key: item.id,
@@ -710,6 +718,7 @@ window.__ModuleLoader__.load({
           canSend,
           onError,
           onConfirm,
+          onDelete,
         })))
     }
 
@@ -726,22 +735,31 @@ window.__ModuleLoader__.load({
      * @returns the section element, or null when no record is completed.
      */
     function CompletedSection(props) {
-      const { t, items, className, showWorkspace, onOpenDetail, onSend, canSend, onError, onConfirm } = props
+      const {
+        t, items, className, showWorkspace, onOpenDetail, onSend, canSend, onError, onConfirm, onDelete, onClear,
+      } = props
       const [open, setOpen] = React.useState(false)
       if (items.length === 0) return null
       return h('section', { className: 'dsh-todo-done' },
-        h('button', {
-          type: 'button',
-          className: 'dsh-todo-doneHead',
-          'aria-expanded': open,
-          'aria-label': t('section.toggle'),
-          onClick: () => { setOpen(value => !value) },
-        },
-        h(ChevronGlyph, { open }),
-        h('span', { className: 'dsh-todo-doneTitle' }, t('section.done', { count: items.length }))),
+        h('div', { className: 'dsh-todo-doneHead' },
+          h('button', {
+            type: 'button',
+            className: 'dsh-todo-doneToggle',
+            'aria-expanded': open,
+            'aria-label': t('section.toggle'),
+            onClick: () => { setOpen(value => !value) },
+          },
+          h(ChevronGlyph, { open }),
+          h('span', { className: 'dsh-todo-doneTitle' }, t('section.done', { count: items.length }))),
+          h('button', {
+            type: 'button',
+            className: 'dsh-todo-doneClear',
+            title: t('confirm.clear', { count: items.length }),
+            onClick: () => { onClear(items) },
+          }, t('section.clear'))),
         open
           ? h(TodoCardList, {
-            t, items, className, showWorkspace, onOpenDetail, onSend, canSend, onError, onConfirm,
+            t, items, className, showWorkspace, onOpenDetail, onSend, canSend, onError, onConfirm, onDelete,
           })
           : null)
     }
@@ -936,6 +954,27 @@ window.__ModuleLoader__.load({
     }
 
     /**
+     * Inline bin glyph for a card's delete control.
+     * @returns the icon element, in the current text colour.
+     */
+    function TrashGlyph() {
+      return h('svg', {
+        viewBox: '0 0 16 16',
+        width: 14,
+        height: 14,
+        'aria-hidden': true,
+        focusable: 'false',
+      }, h('path', {
+        d: 'M3 4.4h10M6.4 4.4V2.9h3.2v1.5M4.6 4.4l.6 8.1a1 1 0 0 0 1 .9h3.6a1 1 0 0 0 1-.9l.6-8.1',
+        fill: 'none',
+        stroke: 'currentColor',
+        strokeWidth: 1.3,
+        strokeLinecap: 'round',
+        strokeLinejoin: 'round',
+      }))
+    }
+
+    /**
      * Inline check glyph shown once a card was sent.
      * @returns the icon element, in the current text colour.
      */
@@ -1021,7 +1060,7 @@ window.__ModuleLoader__.load({
      * @returns the list item element.
      */
     function TodoCard(props) {
-      const { t, item, showWorkspace, onOpenDetail, onSend, canSend, onError, onConfirm } = props
+      const { t, item, showWorkspace, onOpenDetail, onSend, canSend, onError, onConfirm, onDelete } = props
       const [sendStates, setSendStates] = React.useState({ execute: 'idle', explain: 'idle' })
       const [copied, setCopied] = React.useState(false)
       const sendTimers = React.useRef({ execute: 0, explain: 0 })
@@ -1104,7 +1143,15 @@ window.__ModuleLoader__.load({
         }, item.confirmed ? t('card.confirmed') : t('card.confirm')),
         h('div', { className: 'dsh-todo-cardActions' },
           sendControl('execute', ExecuteGlyph, t('execute.label')),
-          sendControl('explain', ExplainGlyph, t('explain.label')))),
+          sendControl('explain', ExplainGlyph, t('explain.label')),
+          h('button', {
+            type: 'button',
+            className: 'dsh-todo-iconButton',
+            'data-variant': 'danger',
+            'aria-label': t('card.delete'),
+            title: t('card.delete'),
+            onClick: (event) => { event.stopPropagation(); onDelete(item) },
+          }, h(TrashGlyph)))),
       h('div', { className: 'dsh-todo-cardTitle' }, item.title),
       item.summary === '' ? null : h('p', { className: 'dsh-todo-cardSummary' }, item.summary),
       h('div', { className: 'dsh-todo-meta' },
@@ -1326,6 +1373,25 @@ window.__ModuleLoader__.load({
         }
       }
 
+      const remove = async (item) => {
+        if (!window.confirm(t('confirm.delete', { title: item.title }))) return
+        try {
+          adopt(await board.remove(item.id))
+        } catch (cause) {
+          report(cause)
+        }
+      }
+
+      const clear = async (itemsToClear) => {
+        if (itemsToClear.length === 0) return
+        if (!window.confirm(t('confirm.clear', { count: itemsToClear.length }))) return
+        try {
+          adopt(await board.clear())
+        } catch (cause) {
+          report(cause)
+        }
+      }
+
       const send = (item, kind) => {
         if (sessionId === undefined) return Promise.reject(new Error(t('send.disabled')))
         return board.send(sessionId, sendPrompt(t, item, kind))
@@ -1365,6 +1431,7 @@ window.__ModuleLoader__.load({
                           onOpenDetail: openDetail,
                           onSend: send,
                           onConfirm: confirm,
+                          onDelete: remove,
                           canSend: sessionId !== undefined,
                           onError: report,
                         })))),
@@ -1377,6 +1444,8 @@ window.__ModuleLoader__.load({
                     onOpenDetail: openDetail,
                     onSend: send,
                     onConfirm: confirm,
+                    onDelete: remove,
+                    onClear: clear,
                     canSend: sessionId !== undefined,
                     onError: report,
                   }),
@@ -1448,6 +1517,25 @@ window.__ModuleLoader__.load({
         }
       }
 
+      const remove = async (item) => {
+        if (!window.confirm(t('confirm.delete', { title: item.title }))) return
+        try {
+          adopt(await board.remove(item.id))
+        } catch (cause) {
+          report(cause)
+        }
+      }
+
+      const clear = async (itemsToClear) => {
+        if (itemsToClear.length === 0) return
+        if (!window.confirm(t('confirm.clear', { count: itemsToClear.length }))) return
+        try {
+          adopt(await board.clear())
+        } catch (cause) {
+          report(cause)
+        }
+      }
+
       const send = (item, kind) => {
         if (sessionId === undefined) return Promise.reject(new Error(t('send.disabled')))
         return board.send(sessionId, sendPrompt(t, item, kind))
@@ -1483,6 +1571,7 @@ window.__ModuleLoader__.load({
                       onOpenDetail: openDetail,
                       onSend: send,
                       onConfirm: confirm,
+                      onDelete: remove,
                       canSend: sessionId !== undefined,
                       onError: report,
                     }),
@@ -1494,6 +1583,8 @@ window.__ModuleLoader__.load({
                     onOpenDetail: openDetail,
                     onSend: send,
                     onConfirm: confirm,
+                    onDelete: remove,
+                    onClear: clear,
                     canSend: sessionId !== undefined,
                     onError: report,
                   }),
@@ -1658,15 +1749,39 @@ html[data-platform='darwin'] .dsh-todo-head {
 .dsh-todo-doneHead {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
   box-sizing: border-box;
   width: 100%;
-  padding: 7px 10px;
+  padding: 3px 4px 3px 6px;
+  border: 0.5px solid var(--dsw-alias-border-l3);
+  border-radius: var(--dsw-radius-md);
+}
+.dsh-todo-doneToggle {
+  flex: 1 1 auto;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  padding: 4px;
   font: inherit;
   color: var(--dsw-alias-label-secondary);
   background: transparent;
+  border: 0;
+  border-radius: var(--dsw-radius-sm);
+  cursor: pointer;
+  text-align: left;
+}
+.dsh-todo-doneClear {
+  flex: none;
+  height: 22px;
+  padding: 0 8px;
+  font: inherit;
+  font-size: 12px;
+  line-height: 16px;
+  color: var(--dsw-alias-state-error-primary);
+  background: transparent;
   border: 0.5px solid var(--dsw-alias-border-l3);
-  border-radius: var(--dsw-radius-md);
+  border-radius: var(--dsw-radius-sm);
   cursor: pointer;
 }
 .dsh-todo-doneTitle {
@@ -1681,12 +1796,14 @@ html[data-platform='darwin'] .dsh-todo-head {
 .dsh-todo-chevron[data-open='true'] {
   transform: rotate(90deg);
 }
-.dsh-todo-doneHead:focus-visible {
+.dsh-todo-doneToggle:focus-visible,
+.dsh-todo-doneClear:focus-visible {
   outline: var(--dsw-focus-ring-width) solid var(--dsw-focus-ring-color, var(--dsw-alias-state-business-primary));
   outline-offset: 1px;
 }
 @media (hover: hover) {
-  .dsh-todo-doneHead:hover {
+  .dsh-todo-doneToggle:hover,
+  .dsh-todo-doneClear:hover {
     background: var(--dsw-alias-interactive-bg-hover);
   }
 }
@@ -1812,6 +1929,9 @@ html[data-platform='darwin'] .dsh-todo-head {
 .dsh-todo-iconButton:disabled {
   opacity: 0.35;
   cursor: default;
+}
+.dsh-todo-iconButton[data-variant='danger'] {
+  color: var(--dsw-alias-state-error-primary);
 }
 @media (hover: hover) {
   .dsh-todo-iconButton:hover {
@@ -2194,6 +2314,7 @@ h6.dsh-todo-mdH { font-size: 13px; }
           add: input => callBoard(ctx, { action: 'add', ...input }),
           update: input => callBoard(ctx, { action: 'update', ...input }),
           remove: id => callBoard(ctx, { action: 'remove', id }),
+          clear: () => callBoard(ctx, { action: 'clear', confirmed: true }),
           send: (sessionId, text) => sendToSession(ctx, sessionId, text),
         }
 
